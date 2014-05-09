@@ -1,0 +1,3 @@
+[submodule "lib/polarssl"]
+	path = lib/polarssl
+	url = https://github.com/mc-server/polarssl.git
