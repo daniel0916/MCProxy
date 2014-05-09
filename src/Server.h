@@ -30,6 +30,7 @@ class cServer
 	
 public:
 	cServer(void);
+	~cServer(void);
 	
 	int  Init(short a_ListenPort, short a_ConnectPort);
 	

@@ -24,14 +24,14 @@ public:
 
 	void Log(const char * a_Format, va_list a_ArgList, eLogLevel a_LogLevel);
 
+	void SetColor(eLogLevel a_LogLevel);
+	void ResetColor(void);
+
 	static cLogger * GetInstance();
 
 private:
 
 	static cLogger * s_Logger;
-
-	void SetColor(eLogLevel a_LogLevel);
-	void ResetColor(void);
 
 };
 

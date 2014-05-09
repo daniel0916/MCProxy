@@ -21,6 +21,15 @@ cServer::cServer(void) :
 
 
 
+cServer::~cServer(void)
+{
+	cLogger::GetInstance()->ResetColor();
+}
+
+
+
+
+
 int cServer::Init(short a_ListenPort, short a_ConnectPort)
 {
 	m_ConnectPort = a_ConnectPort;
