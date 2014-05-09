@@ -22,9 +22,7 @@ int main(int argc, char ** argv)
 		return res;
 	}
 
-	while (true)
-	{
-	}
+	Server.Start();
 	
 	return 0;
 }

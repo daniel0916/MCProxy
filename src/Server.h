@@ -25,14 +25,13 @@ class cServer
 	cRsaPrivateKey m_PrivateKey;
 	AString m_PublicKeyDER;
 	short m_ConnectPort;
-
-	
 	
 public:
 	cServer(void);
 	~cServer(void);
 	
-	int  Init(short a_ListenPort, short a_ConnectPort);
+	int Init(short a_ListenPort, short a_ConnectPort);
+	void Start(void);
 	
 	cRsaPrivateKey & GetPrivateKey(void) { return m_PrivateKey; }
 	const AString & GetPublicKeyDER (void) { return m_PublicKeyDER; }
@@ -43,8 +42,12 @@ public:
 
 private:
 
+	cThread * m_InputThread;
+	bool m_bStop;
+	static void InputThread(void* a_Params);
+	void ExecuteConsoleCommand(const AString & a_Cmd);
+
 	cListenThread m_ListenThread;
-	
 
 	// cListenThread::cCallback overrides:
 	virtual void OnConnectionAccepted(cSocket & a_Socket) override;

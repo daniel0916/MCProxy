@@ -194,6 +194,8 @@ typedef unsigned char Byte;
 #include "StringUtils.h"
 #include "CriticalSection.h"
 #include "Logger.h"
+#include "Event.h"
+#include "Thread.h"
 
 
 
