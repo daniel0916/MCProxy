@@ -141,18 +141,6 @@ typedef unsigned char Byte;
 
 
 
-AString PrintableAbsIntTriplet(int a_X, int a_Y, int a_Z, double a_Divisor = 32)
-{
-	return Printf("<%d, %d, %d> ~ {%.02f, %.02f, %.02f}",
-		a_X, a_Y, a_Z,
-		(double)a_X / a_Divisor, (double)a_Y / a_Divisor, (double)a_Z / a_Divisor
-	);
-}
-
-
-
-
-
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // cConnection:
 
