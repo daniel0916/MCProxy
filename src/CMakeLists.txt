@@ -52,5 +52,8 @@ SET_TARGET_PROPERTIES(${EXECUTABLE} PROPERTIES
 	RUNTIME_OUTPUT_DIRECTORY_RELEASEPROFILE ${CMAKE_SOURCE_DIR}/MCProxy
 )
 
-#target_link_libraries(MCProxy zlib polarssl pthread)
+if (NOT MSVC)
+	target_link_libraries(${EXECUTABLE} PolarSSL++)
+endif ()
+
 target_link_libraries(MCProxy zlib polarssl)
