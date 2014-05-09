@@ -29,21 +29,15 @@ class cServerConnection;
 class cConnection :
 	public cSocketThreads::cCallback
 {
-	AString m_LogNameBase;  ///< Base for the log filename and all files connected to this log
-	
 	int m_ItemIdx;  ///< Index for the next file into which item metadata should be written (ParseSlot() function)
 	
 	cCriticalSection m_CSLog;
-	FILE * m_LogFile;
 	
 	cServer & m_Server;
 	cSocket m_ClientSocket;
 	cSocket m_ServerSocket;
 
 	cServerConnection * m_OldServerConnection;
-	
-	cTimer m_Timer;
-	long long m_BeginTick;  // Tick when the relative time was first retrieved (used for GetRelativeTime())
 	
 	enum eConnectionState
 	{
@@ -55,8 +49,6 @@ class cConnection :
 	
 	eConnectionState m_ClientState;
 	eConnectionState m_ServerState;
-	
-	int m_Nonce;
 
 	int m_ClientEntityID;
 	int m_ServerEntityID;
@@ -76,10 +68,6 @@ class cConnection :
 public:
 	cConnection(cSocket a_ClientSocket, cSocket a_ServerSocket, cServer & a_Server);
 	~cConnection();
-	
-	void Log(const char * a_Format, ...);
-	void DataLog(const void * a_Data, int a_Size, const char * a_Format, ...);
-	void LogFlush(void);
 
 	bool SendToClient(const char * a_Data, size_t a_Size);
 
@@ -115,9 +103,6 @@ protected:
 	
 	/// True if the server connection has provided encryption keys
 	bool m_IsServerEncrypted;
-	
-	/// Returns the time relative to the first call of this function, in the fractional seconds elapsed
-	double GetRelativeTime(void);
 	
 	/// Sends data to the specified socket. If sending fails, prints a fail message using a_Peer and returns false.
 	bool SendData(cSocket a_Socket, const char * a_Data, size_t a_Size, const char * a_Peer);
@@ -248,9 +233,6 @@ protected:
 	
 	/// Parses the metadata in a_Buffer into raw metadata in an AString; returns true if successful, false if not enough data
 	bool ParseMetadata(cByteBuffer & a_Buffer, AString & a_Metadata);
-	
-	/// Logs the contents of the metadata in the AString, using Log(). Assumes a_Metadata is valid (parsed by ParseMetadata()). The log is indented by a_IndentCount spaces
-	void LogMetadata(const AString & a_Metadata, size_t a_IndentCount);
 	
 	/// Send EKResp to the server:
 	void SendEncryptionKeyResponse(const AString & a_ServerPublicKey, const AString & a_Nonce);
