@@ -97,10 +97,8 @@ void cServer::InputThread(void * a_Params)
 
 
 
-int cServer::Init(short a_ListenPort, short a_ConnectPort)
+int cServer::Init(void)
 {
-	m_ConnectPort = a_ConnectPort;
-
 	#ifdef _WIN32
 		WSAData wsa;
 		int res = WSAStartup(0x0202, &wsa);
@@ -115,8 +113,35 @@ int cServer::Init(short a_ListenPort, short a_ConnectPort)
 	m_PrivateKey.Generate();
 	m_PublicKeyDER = m_PrivateKey.GetPubKeyDER();
 
+	LOGINFO("Loading config...");
+	if (!m_Config.ReadFile("config.ini"))
+	{
+		m_Config.SetValueI("Proxy", "ListenPort", 25565);
+		m_Config.SetValue("Proxy", "MainServer", "Lobby");
+		m_Config.SetValue("Servers", "Lobby", "localhost:25566");
+		m_Config.WriteFile("config.ini");
+	}
+
+	int ListenPort = m_Config.GetValueI("Proxy", "ListenPort");
+	if (ListenPort == NULL)
+	{
+		LOGWARN("ListenPort is wrong");
+		return 1;
+	}
+
+	AString ServerName = m_Config.GetValue("Proxy", "MainServer");
+	AString ServerConfig = m_Config.GetValue("Servers", ServerName);
+	if (ServerConfig.empty())
+	{
+		LOGWARN("Can't load MainServer from config");
+		return 1;
+	}
+	AStringVector ServerData = StringSplit(ServerConfig, ":");
+	m_MainServerAddress = ServerData[0];
+	m_MainServerPort = atoi(ServerData[1].c_str());
+
 	m_ListenThread.SetReuseAddr(true);
-	if (!m_ListenThread.Initialize("25564"))
+	if (!m_ListenThread.Initialize(Printf("%i", ListenPort)))
 	{
 		return 1;
 	}
@@ -180,7 +205,7 @@ void cServer::OnConnectionAccepted(cSocket & a_Socket)
 	}
 
 	cSocket Socket = cSocket(ServerSocket);
-	if (!Socket.ConnectIPv4("localhost", 25565))
+	if (!Socket.ConnectIPv4(m_MainServerAddress, m_MainServerPort))
 	{
 		return;
 	}

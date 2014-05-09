@@ -12,6 +12,7 @@
 #include "SocketThreads.h"
 #include "ListenThread.h"
 #include "PolarSSL++/RsaPrivateKey.h"
+#include "inifile\iniFile.h"
 
 
 
@@ -30,7 +31,7 @@ public:
 	cServer(void);
 	~cServer(void);
 	
-	int Init(short a_ListenPort, short a_ConnectPort);
+	int Init(void);
 	void Start(void);
 	
 	cRsaPrivateKey & GetPrivateKey(void) { return m_PrivateKey; }
@@ -39,6 +40,10 @@ public:
 	short GetConnectPort(void) const { return m_ConnectPort; }
 
 	cSocketThreads m_SocketThreads;
+
+	cIniFile m_Config;
+	AString m_MainServerAddress;
+	int m_MainServerPort;
 
 private:
 

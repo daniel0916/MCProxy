@@ -7,6 +7,7 @@ set_flags()
 set_lib_flags()
 
 add_subdirectory(lib/zlib/)
+add_subdirectory(lib/inifile/)
 
 include(lib/polarssl.cmake)
 

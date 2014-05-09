@@ -56,4 +56,4 @@ if (NOT MSVC)
 	target_link_libraries(${EXECUTABLE} PolarSSL++)
 endif ()
 
-target_link_libraries(MCProxy zlib polarssl)
+target_link_libraries(MCProxy zlib polarssl iniFile)

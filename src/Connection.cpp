@@ -631,19 +631,33 @@ bool cConnection::HandleClientChatMessage(void)
 {
 	HANDLE_CLIENT_PACKET_READ(ReadVarUTF8String, AString, Message);
 
-	if (Message == "/server")
+	AStringVector ChatMessage = StringSplit(Message, " ");
+	if (ChatMessage[0] == "/server")
 	{
+		if (ChatMessage.size() < 2)
+		{
+			return true;
+		}
+		AString ServerConfig = m_Server.m_Config.GetValue("Servers", ChatMessage[1]);
+		if (ServerConfig.empty())
+		{
+			// Server not available (TODO: Send a message to the client)
+			return true;
+		}
+
+		AStringVector ServerData = StringSplit(ServerConfig, ":");
+		AString ServerAddress = ServerData[0];
+		int ServerPort = atoi(ServerData[1].c_str());
+
 		SOCKET ServerSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 		if (ServerSocket == INVALID_SOCKET)
 		{
-			printf("Invalid socket!");
 			return true;
 		}
 
 		cSocket Socket = cSocket(ServerSocket);
-		if (!Socket.ConnectIPv4("localhost", 25566))
+		if (!Socket.ConnectIPv4(ServerAddress, ServerPort))
 		{
-			printf("connection to server failed: %d\n", SocketError);
 			return true;
 		}
 		
