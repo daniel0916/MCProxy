@@ -299,27 +299,11 @@ bool cConnection::DecodeClientsPackets(const char * a_Data, int a_Size)
 				// Game:
 				switch (PacketType)
 				{
-					case 0x00: HANDLE_CLIENT_READ(HandleClientKeepAlive()); break;
 					case 0x01: HANDLE_CLIENT_READ(HandleClientChatMessage()); break;
 					case 0x02: HANDLE_CLIENT_READ(HandleClientUseEntity()); break;
 					case 0x03: HANDLE_CLIENT_READ(HandleClientPlayerOnGround()); break;
-					case 0x04: HANDLE_CLIENT_READ(HandleClientPlayerPosition()); break;
-					case 0x05: HANDLE_CLIENT_READ(HandleClientPlayerLook()); break;
-					case 0x06: HANDLE_CLIENT_READ(HandleClientPlayerPositionLook()); break;
-					case 0x07: HANDLE_CLIENT_READ(HandleClientBlockDig()); break;
-					case 0x08: HANDLE_CLIENT_READ(HandleClientBlockPlace()); break;
-					case 0x09: HANDLE_CLIENT_READ(HandleClientSlotSelect()); break;
 					case 0x0a: HANDLE_CLIENT_READ(HandleClientAnimation()); break;
 					case 0x0b: HANDLE_CLIENT_READ(HandleClientEntityAction()); break;
-					case 0x0d: HANDLE_CLIENT_READ(HandleClientWindowClose()); break;
-					case 0x0e: HANDLE_CLIENT_READ(HandleClientWindowClick()); break;
-					case 0x10: HANDLE_CLIENT_READ(HandleClientCreativeInventoryAction()); break;
-					case 0x12: HANDLE_CLIENT_READ(HandleClientUpdateSign()); break;
-					case 0x13: HANDLE_CLIENT_READ(HandleClientPlayerAbilities()); break;
-					case 0x14: HANDLE_CLIENT_READ(HandleClientTabCompletion()); break;
-					case 0x15: HANDLE_CLIENT_READ(HandleClientLocaleAndView()); break;
-					case 0x16: HANDLE_CLIENT_READ(HandleClientClientStatuses()); break;
-					case 0x17: HANDLE_CLIENT_READ(HandleClientPluginMessage()); break;
 					default:   HANDLE_CLIENT_READ(HandleClientUnknownPacket(PacketType, PacketLen, PacketReadSoFar)); break;
 				}
 				break;
@@ -588,45 +572,6 @@ bool cConnection::HandleClientAnimation(void)
 
 
 
-bool cConnection::HandleClientBlockDig(void)
-{
-	HANDLE_CLIENT_PACKET_READ(ReadByte,  Byte, Status);
-	HANDLE_CLIENT_PACKET_READ(ReadBEInt, int,  BlockX);
-	HANDLE_CLIENT_PACKET_READ(ReadByte,  Byte, BlockY);
-	HANDLE_CLIENT_PACKET_READ(ReadBEInt, int,  BlockZ);
-	HANDLE_CLIENT_PACKET_READ(ReadByte,  Byte, BlockFace);
-
-	COPY_TO_SERVER();
-	return true;
-}
-
-
-
-
-
-bool cConnection::HandleClientBlockPlace(void)
-{
-	HANDLE_CLIENT_PACKET_READ(ReadBEInt, int,  BlockX);
-	HANDLE_CLIENT_PACKET_READ(ReadByte,  Byte, BlockY);
-	HANDLE_CLIENT_PACKET_READ(ReadBEInt, int,  BlockZ);
-	HANDLE_CLIENT_PACKET_READ(ReadChar,  char, Face);
-	AString Desc;
-	if (!ParseSlot(m_ClientBuffer, Desc))
-	{
-		return false;
-	}
-	HANDLE_CLIENT_PACKET_READ(ReadChar,  char, CursorX);
-	HANDLE_CLIENT_PACKET_READ(ReadChar,  char, CursorY);
-	HANDLE_CLIENT_PACKET_READ(ReadChar,  char, CursorZ);
-
-	COPY_TO_SERVER();
-	return true;
-}
-
-
-
-
-
 bool cConnection::HandleClientChatMessage(void)
 {
 	HANDLE_CLIENT_PACKET_READ(ReadVarUTF8String, AString, Message);
@@ -743,47 +688,6 @@ bool cConnection::HandleClientChatMessage(void)
 
 
 
-bool cConnection::HandleClientClientStatuses(void)
-{
-	HANDLE_CLIENT_PACKET_READ(ReadChar, char, Statuses);
-
-	COPY_TO_SERVER();
-	return true;
-}
-
-
-
-
-
-bool cConnection::HandleClientCreativeInventoryAction(void)
-{
-	HANDLE_CLIENT_PACKET_READ(ReadBEShort, short, SlotNum);
-	AString Item;
-	if (!ParseSlot(m_ClientBuffer, Item))
-	{
-		return false;
-	}
-
-	COPY_TO_SERVER();
-	return true;
-}
-
-
-
-
-
-bool cConnection::HandleClientDisconnect(void)
-{
-	HANDLE_CLIENT_PACKET_READ(ReadVarUTF8String, AString, Reason);
-
-	COPY_TO_SERVER();
-	return true;
-}
-
-
-
-
-
 bool cConnection::HandleClientEntityAction(void)
 {
 	HANDLE_CLIENT_PACKET_READ(ReadBEInt, int,  PlayerID);
@@ -818,76 +722,6 @@ bool cConnection::HandleClientEntityAction(void)
 
 
 
-bool cConnection::HandleClientKeepAlive(void)
-{
-	HANDLE_CLIENT_PACKET_READ(ReadBEInt, int, ID);
-
-	COPY_TO_SERVER();
-	return true;
-}
-
-
-
-
-
-bool cConnection::HandleClientLocaleAndView(void)
-{
-	HANDLE_CLIENT_PACKET_READ(ReadVarUTF8String, AString, Locale);
-	HANDLE_CLIENT_PACKET_READ(ReadChar,          char,    ViewDistance);
-	HANDLE_CLIENT_PACKET_READ(ReadChar,          char,    ChatFlags);
-	HANDLE_CLIENT_PACKET_READ(ReadChar,          char,    Unused);
-	HANDLE_CLIENT_PACKET_READ(ReadChar,          char,    Difficulty);
-	HANDLE_CLIENT_PACKET_READ(ReadChar,          char,    ShowCape);
-
-	COPY_TO_SERVER();
-	return true;
-}
-
-
-
-
-
-bool cConnection::HandleClientPing(void)
-{
-	m_HasClientPinged = true;
-	m_ClientBuffer.ResetRead();
-
-	SERVERSEND(m_ClientBuffer);
-	return true;
-}
-
-
-
-
-
-bool cConnection::HandleClientPlayerAbilities(void)
-{
-	HANDLE_CLIENT_PACKET_READ(ReadChar,    char, Flags);
-	HANDLE_CLIENT_PACKET_READ(ReadBEFloat, float, FlyingSpeed);
-	HANDLE_CLIENT_PACKET_READ(ReadBEFloat, float, WalkingSpeed);
-
-	COPY_TO_SERVER();
-	return true;
-}
-
-
-
-
-
-bool cConnection::HandleClientPlayerLook(void)
-{
-	HANDLE_CLIENT_PACKET_READ(ReadBEFloat, float, Yaw);
-	HANDLE_CLIENT_PACKET_READ(ReadBEFloat, float, Pitch);
-	HANDLE_CLIENT_PACKET_READ(ReadChar,    char,  OnGround);
-
-	COPY_TO_SERVER();
-	return true;
-}
-
-
-
-
-
 bool cConnection::HandleClientPlayerOnGround(void)
 {
 	HANDLE_CLIENT_PACKET_READ(ReadChar, char, OnGround);
@@ -897,70 +731,6 @@ bool cConnection::HandleClientPlayerOnGround(void)
 		COPY_TO_SERVER();
 	}
 	
-	return true;
-}
-
-
-
-
-
-bool cConnection::HandleClientPlayerPosition(void)
-{
-	HANDLE_CLIENT_PACKET_READ(ReadBEDouble, double, PosX);
-	HANDLE_CLIENT_PACKET_READ(ReadBEDouble, double, PosY);
-	HANDLE_CLIENT_PACKET_READ(ReadBEDouble, double, Stance);
-	HANDLE_CLIENT_PACKET_READ(ReadBEDouble, double, PosZ);
-	HANDLE_CLIENT_PACKET_READ(ReadChar,     char,   IsOnGround);
-	
-	COPY_TO_SERVER();
-	return true;
-}
-
-
-
-
-
-bool cConnection::HandleClientPlayerPositionLook(void)
-{
-	HANDLE_CLIENT_PACKET_READ(ReadBEDouble, double, PosX);
-	HANDLE_CLIENT_PACKET_READ(ReadBEDouble, double, PosY);
-	HANDLE_CLIENT_PACKET_READ(ReadBEDouble, double, Stance);
-	HANDLE_CLIENT_PACKET_READ(ReadBEDouble, double, PosZ);
-	HANDLE_CLIENT_PACKET_READ(ReadBEFloat,  float,  Yaw);
-	HANDLE_CLIENT_PACKET_READ(ReadBEFloat,  float,  Pitch);
-	HANDLE_CLIENT_PACKET_READ(ReadChar,     char,   IsOnGround);
-	
-	COPY_TO_SERVER();
-	return true;
-}
-
-
-
-
-
-bool cConnection::HandleClientPluginMessage(void)
-{
-	HANDLE_CLIENT_PACKET_READ(ReadVarUTF8String, AString, ChannelName);
-	HANDLE_CLIENT_PACKET_READ(ReadBEShort,         short,   Length);
-	AString Data;
-	if (!m_ClientBuffer.ReadString(Data, Length))
-	{
-		return false;
-	}
-
-	COPY_TO_SERVER();
-	return true;
-}
-
-
-
-
-
-bool cConnection::HandleClientSlotSelect(void)
-{
-	HANDLE_CLIENT_PACKET_READ(ReadBEShort, short, SlotNum);
-
-	COPY_TO_SERVER();
 	return true;
 }
 
@@ -982,36 +752,6 @@ bool cConnection::HandleClientStatusPing(void)
 
 bool cConnection::HandleClientStatusRequest(void)
 {
-	COPY_TO_SERVER();
-	return true;
-}
-
-
-
-
-
-bool cConnection::HandleClientTabCompletion(void)
-{
-	HANDLE_CLIENT_PACKET_READ(ReadVarUTF8String, AString, Query);
-
-	COPY_TO_SERVER();
-	return true;
-}
-
-
-
-
-
-bool cConnection::HandleClientUpdateSign(void)
-{
-	HANDLE_CLIENT_PACKET_READ(ReadBEInt,         int,     BlockX);
-	HANDLE_CLIENT_PACKET_READ(ReadBEShort,       short,   BlockY);
-	HANDLE_CLIENT_PACKET_READ(ReadBEInt,         int,     BlockZ);
-	HANDLE_CLIENT_PACKET_READ(ReadVarUTF8String, AString, Line1);
-	HANDLE_CLIENT_PACKET_READ(ReadVarUTF8String, AString, Line2);
-	HANDLE_CLIENT_PACKET_READ(ReadVarUTF8String, AString, Line3);
-	HANDLE_CLIENT_PACKET_READ(ReadVarUTF8String, AString, Line4);
-
 	COPY_TO_SERVER();
 	return true;
 }
@@ -1045,39 +785,6 @@ bool cConnection::HandleClientUseEntity(void)
 		COPY_TO_SERVER();
 	}
 
-	return true;
-}
-
-
-
-
-
-bool cConnection::HandleClientWindowClick(void)
-{
-	HANDLE_CLIENT_PACKET_READ(ReadChar,    char,  WindowID);
-	HANDLE_CLIENT_PACKET_READ(ReadBEShort, short, SlotNum);
-	HANDLE_CLIENT_PACKET_READ(ReadChar,    char,  Button);
-	HANDLE_CLIENT_PACKET_READ(ReadBEShort, short, TransactionID);
-	HANDLE_CLIENT_PACKET_READ(ReadChar,    char,  Mode);
-	AString Item;
-	if (!ParseSlot(m_ClientBuffer, Item))
-	{
-		return false;
-	}
-
-	COPY_TO_SERVER();
-	return true;
-}
-
-
-
-
-
-bool cConnection::HandleClientWindowClose(void)
-{
-	HANDLE_CLIENT_PACKET_READ(ReadChar, char, WindowID);
-
-	COPY_TO_SERVER();
 	return true;
 }
 

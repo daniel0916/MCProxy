@@ -135,28 +135,10 @@ protected:
 
 	// Packet handling, client-side, game:
 	bool HandleClientAnimation(void);
-	bool HandleClientBlockDig(void);
-	bool HandleClientBlockPlace(void);
 	bool HandleClientChatMessage(void);
-	bool HandleClientClientStatuses(void);
-	bool HandleClientCreativeInventoryAction(void);
-	bool HandleClientDisconnect(void);
 	bool HandleClientEntityAction(void);
-	bool HandleClientKeepAlive(void);
-	bool HandleClientLocaleAndView(void);
-	bool HandleClientPing(void);
-	bool HandleClientPlayerAbilities(void);
-	bool HandleClientPlayerLook(void);
 	bool HandleClientPlayerOnGround(void);
-	bool HandleClientPlayerPosition(void);
-	bool HandleClientPlayerPositionLook(void);
-	bool HandleClientPluginMessage(void);
-	bool HandleClientSlotSelect(void);
-	bool HandleClientTabCompletion(void);
-	bool HandleClientUpdateSign(void);
 	bool HandleClientUseEntity(void);
-	bool HandleClientWindowClick(void);
-	bool HandleClientWindowClose(void);
 	
 	bool HandleClientUnknownPacket(UInt32 a_PacketType, UInt32 a_PacketLen, UInt32 a_PacketReadSoFar);
 
