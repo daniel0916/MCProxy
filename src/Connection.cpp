@@ -153,7 +153,6 @@ cConnection::cConnection(cSocket a_ClientSocket, cSocket a_ServerSocket, cServer
 	m_ServerState(csUnencrypted),
 	m_ClientBuffer(1024 KiB),
 	m_ServerBuffer(1024 KiB),
-	m_HasClientPinged(false),
 	m_ServerProtocolState(-1),
 	m_ClientProtocolState(-1),
 	m_IsServerEncrypted(false),
@@ -300,7 +299,6 @@ bool cConnection::DecodeClientsPackets(const char * a_Data, int a_Size)
 				switch (PacketType)
 				{
 					case 0x01: HANDLE_CLIENT_READ(HandleClientChatMessage()); break;
-					case 0x02: HANDLE_CLIENT_READ(HandleClientUseEntity()); break;
 					case 0x03: HANDLE_CLIENT_READ(HandleClientPlayerOnGround()); break;
 					case 0x0a: HANDLE_CLIENT_READ(HandleClientAnimation()); break;
 					case 0x0b: HANDLE_CLIENT_READ(HandleClientEntityAction()); break;
@@ -402,26 +400,11 @@ bool cConnection::DecodeServersPackets(const char * a_Data, int a_Size)
 				// Game:
 				switch (PacketType)
 				{
-					case 0x00: HANDLE_SERVER_READ(HandleServerKeepAlive()); break;
 					case 0x01: HANDLE_SERVER_READ(HandleServerJoinGame()); break;
-					case 0x02: HANDLE_SERVER_READ(HandleServerChatMessage()); break;
-					case 0x03: HANDLE_SERVER_READ(HandleServerTimeUpdate()); break;
-					case 0x04: HANDLE_SERVER_READ(HandleServerEntityEquipment()); break;
-					case 0x05: HANDLE_SERVER_READ(HandleServerCompass()); break;
-					case 0x06: HANDLE_SERVER_READ(HandleServerUpdateHealth()); break;
-					case 0x07: HANDLE_SERVER_READ(HandleServerRespawn()); break;
-					case 0x08: HANDLE_SERVER_READ(HandleServerPlayerPositionLook()); break;
-					case 0x09: HANDLE_SERVER_READ(HandleServerSlotSelect()); break;
 					case 0x0a: HANDLE_SERVER_READ(HandleServerUseBed()); break;
 					case 0x0b: HANDLE_SERVER_READ(HandleServerPlayerAnimation()); break;
-					case 0x0c: HANDLE_SERVER_READ(HandleServerSpawnNamedEntity()); break;
 					case 0x0d: HANDLE_SERVER_READ(HandleServerCollectPickup()); break;
-					case 0x0e: HANDLE_SERVER_READ(HandleServerSpawnObjectVehicle()); break;
-					case 0x0f: HANDLE_SERVER_READ(HandleServerSpawnMob()); break;
-					case 0x10: HANDLE_SERVER_READ(HandleServerSpawnPainting()); break;
-					case 0x11: HANDLE_SERVER_READ(HandleServerSpawnExperienceOrbs()); break;
 					case 0x12: HANDLE_SERVER_READ(HandleServerEntityVelocity()); break;
-					case 0x13: HANDLE_SERVER_READ(HandleServerDestroyEntities()); break;
 					case 0x14: HANDLE_SERVER_READ(HandleServerEntity()); break;
 					case 0x15: HANDLE_SERVER_READ(HandleServerEntityRelativeMove()); break;
 					case 0x16: HANDLE_SERVER_READ(HandleServerEntityLook()); break;
@@ -430,32 +413,10 @@ bool cConnection::DecodeServersPackets(const char * a_Data, int a_Size)
 					case 0x19: HANDLE_SERVER_READ(HandleServerEntityHeadLook()); break;
 					case 0x1a: HANDLE_SERVER_READ(HandleServerEntityStatus()); break;
 					case 0x1b: HANDLE_SERVER_READ(HandleServerAttachEntity()); break;
-					case 0x1c: HANDLE_SERVER_READ(HandleServerEntityMetadata()); break;
-					case 0x1f: HANDLE_SERVER_READ(HandleServerSetExperience()); break;
-					case 0x20: HANDLE_SERVER_READ(HandleServerEntityProperties()); break;
-					case 0x21: HANDLE_SERVER_READ(HandleServerMapChunk()); break;
-					case 0x22: HANDLE_SERVER_READ(HandleServerMultiBlockChange()); break;
-					case 0x23: HANDLE_SERVER_READ(HandleServerBlockChange()); break;
-					case 0x24: HANDLE_SERVER_READ(HandleServerBlockAction()); break;
-					case 0x26: HANDLE_SERVER_READ(HandleServerMapChunkBulk()); break;
-					case 0x27: HANDLE_SERVER_READ(HandleServerExplosion()); break;
-					case 0x28: HANDLE_SERVER_READ(HandleServerSoundEffect()); break;
-					case 0x29: HANDLE_SERVER_READ(HandleServerNamedSoundEffect()); break;
-					case 0x2b: HANDLE_SERVER_READ(HandleServerChangeGameState()); break;
-					case 0x2d: HANDLE_SERVER_READ(HandleServerWindowOpen()); break;
-					case 0x2e: HANDLE_SERVER_READ(HandleServerWindowClose()); break;
-					case 0x2f: HANDLE_SERVER_READ(HandleServerSetSlot()); break;
-					case 0x30: HANDLE_SERVER_READ(HandleServerWindowContents()); break;
-					case 0x33: HANDLE_SERVER_READ(HandleServerUpdateSign()); break;
-					case 0x35: HANDLE_SERVER_READ(HandleServerUpdateTileEntity()); break;
-					case 0x37: HANDLE_SERVER_READ(HandleServerStatistics()); break;
-					case 0x38: HANDLE_SERVER_READ(HandleServerPlayerListItem()); break;
-					case 0x39: HANDLE_SERVER_READ(HandleServerPlayerAbilities()); break;
-					case 0x3a: HANDLE_SERVER_READ(HandleServerTabCompletion()); break;
+					//case 0x1c: HANDLE_SERVER_READ(HandleServerEntityMetadata()); break;
+					//case 0x20: HANDLE_SERVER_READ(HandleServerEntityProperties()); break;
 					case 0x3b: HANDLE_SERVER_READ(HandleServerScoreboardObjective()); break;
 					case 0x3e: HANDLE_SERVER_READ(HandleServerTeams()); break;
-					case 0x3f: HANDLE_SERVER_READ(HandleServerPluginMessage()); break;
-					case 0x40: HANDLE_SERVER_READ(HandleServerKick()); break;
 					default:   HANDLE_SERVER_READ(HandleServerUnknownPacket(PacketType, PacketLen, PacketReadSoFar)); break;
 				}  // switch (PacketType)
 				break;
@@ -656,8 +617,8 @@ bool cConnection::HandleClientChatMessage(void)
 		cByteBuffer HandshakePacket(512);
 		HandshakePacket.WriteByte(0x00);
 		HandshakePacket.WriteVarInt(4);
-		HandshakePacket.WriteVarUTF8String("localhost");
-		HandshakePacket.WriteBEShort(25566);
+		HandshakePacket.WriteVarUTF8String(ServerAddress);
+		HandshakePacket.WriteBEShort(ServerPort);
 		HandshakePacket.WriteVarInt(2);
 		AString HandshakePkt;
 		HandshakePacket.ReadAll(HandshakePkt);
@@ -667,7 +628,7 @@ bool cConnection::HandleClientChatMessage(void)
 
 		cByteBuffer LoginStartPacket(512);
 		LoginStartPacket.WriteByte(0x00);
-		LoginStartPacket.WriteVarUTF8String("CryptoCrafter");
+		LoginStartPacket.WriteVarUTF8String(m_UserName);
 		AString LoginStartPkt;
 		LoginStartPacket.ReadAll(LoginStartPkt);
 		cByteBuffer LoginStartToServer(512);
@@ -760,38 +721,6 @@ bool cConnection::HandleClientStatusRequest(void)
 
 
 
-bool cConnection::HandleClientUseEntity(void)
-{
-	HANDLE_CLIENT_PACKET_READ(ReadBEInt, int,  EntityID);
-	HANDLE_CLIENT_PACKET_READ(ReadChar,  char, MouseButton);
-
-	if (EntityID == m_ClientEntityID)
-	{
-		m_ClientBuffer.CommitRead();
-
-		// Send the same packet, but with modified Entity ID:
-		cByteBuffer Packet(512);
-		Packet.WriteByte(0x02);
-		Packet.WriteBEInt(m_ServerEntityID);
-		Packet.WriteChar(MouseButton);
-		AString Pkt;
-		Packet.ReadAll(Pkt);
-		cByteBuffer ToServer(512);
-		ToServer.WriteVarUTF8String(Pkt);
-		SERVERSEND(ToServer);
-	}
-	else
-	{
-		COPY_TO_SERVER();
-	}
-
-	return true;
-}
-
-
-
-
-
 bool cConnection::HandleClientUnknownPacket(UInt32 a_PacketType, UInt32 a_PacketLen, UInt32 a_PacketReadSoFar)
 {
 	AString Data;
@@ -863,6 +792,8 @@ bool cConnection::HandleServerLoginSuccess(void)
 		return true;
 	}
 
+	m_UserName = Username;
+
 	m_ServerProtocolState = 3;
 	
 	if (m_IsServerEncrypted)
@@ -917,100 +848,31 @@ bool cConnection::HandleServerAttachEntity(void)
 
 
 
-bool cConnection::HandleServerBlockAction(void)
-{
-	HANDLE_SERVER_PACKET_READ(ReadBEInt,   int,    BlockX);
-	HANDLE_SERVER_PACKET_READ(ReadBEShort, short,  BlockY);
-	HANDLE_SERVER_PACKET_READ(ReadBEInt,   int,    BlockZ);
-	HANDLE_SERVER_PACKET_READ(ReadByte,    Byte,   Byte1);
-	HANDLE_SERVER_PACKET_READ(ReadByte,    Byte,   Byte2);
-	HANDLE_SERVER_PACKET_READ(ReadVarInt,  UInt32, BlockID);
-
-	COPY_TO_CLIENT();
-	return true;
-}
-
-
-
-
-
-bool cConnection::HandleServerBlockChange(void)
-{
-	HANDLE_SERVER_PACKET_READ(ReadBEInt,   int,    BlockX);
-	HANDLE_SERVER_PACKET_READ(ReadByte,    Byte,   BlockY);
-	HANDLE_SERVER_PACKET_READ(ReadBEInt,   int,    BlockZ);
-	HANDLE_SERVER_PACKET_READ(ReadVarInt,  UInt32, BlockType);
-	HANDLE_SERVER_PACKET_READ(ReadChar,    char,   BlockMeta);
-
-	COPY_TO_CLIENT();
-	return true;
-}
-
-
-
-
-
-bool cConnection::HandleServerChangeGameState(void)
-{
-	HANDLE_SERVER_PACKET_READ(ReadChar,    char,  Reason);
-	HANDLE_SERVER_PACKET_READ(ReadBEFloat, float, Data);
-
-	COPY_TO_CLIENT();
-	return true;
-}
-
-
-
-
-
-bool cConnection::HandleServerChatMessage(void)
-{
-	HANDLE_SERVER_PACKET_READ(ReadVarUTF8String, AString, Message);
-
-	COPY_TO_CLIENT();
-	return true;
-}
-
-
-
-
-
 bool cConnection::HandleServerCollectPickup(void)
 {
 	HANDLE_SERVER_PACKET_READ(ReadBEInt, int, CollectedID);
 	HANDLE_SERVER_PACKET_READ(ReadBEInt, int, CollectorID);
 
-	COPY_TO_CLIENT();
-	return true;
-}
-
-
-
-
-
-bool cConnection::HandleServerCompass(void)
-{
-	HANDLE_SERVER_PACKET_READ(ReadBEInt, int, SpawnX);
-	HANDLE_SERVER_PACKET_READ(ReadBEInt, int, SpawnY);
-	HANDLE_SERVER_PACKET_READ(ReadBEInt, int, SpawnZ);
-
-	COPY_TO_CLIENT();
-	return true;
-}
-
-
-
-
-
-bool cConnection::HandleServerDestroyEntities(void)
-{
-	HANDLE_SERVER_PACKET_READ(ReadByte, Byte, NumEntities);
-	if (!m_ServerBuffer.SkipRead((int)NumEntities * 4))
+	if (CollectorID == m_ServerEntityID)
 	{
-		return false;
+		m_ServerBuffer.CommitRead();
+
+		// Send the same packet, but with modified Entity ID:
+		cByteBuffer Packet(512);
+		Packet.WriteByte(0x0D);
+		Packet.WriteBEInt(CollectedID);
+		Packet.WriteBEInt(m_ClientEntityID);
+		AString Pkt;
+		Packet.ReadAll(Pkt);
+		cByteBuffer ToClient(512);
+		ToClient.WriteVarUTF8String(Pkt);
+		CLIENTSEND(ToClient);
+	}
+	else
+	{
+		COPY_TO_CLIENT();
 	}
 
-	COPY_TO_CLIENT();
 	return true;
 }
 
@@ -1040,28 +902,6 @@ bool cConnection::HandleServerEntity(void)
 	{
 		COPY_TO_CLIENT();
 	}
-
-	return true;
-}
-
-
-
-
-
-bool cConnection::HandleServerEntityEquipment(void)
-{
-	HANDLE_SERVER_PACKET_READ(ReadBEInt,   int,   EntityID);
-	HANDLE_SERVER_PACKET_READ(ReadBEShort, short, SlotNum);
-
-	AString Item;
-	if (!ParseSlot(m_ServerBuffer, Item))
-	{
-		return false;
-	}
-
-	// TODO: Add Entity ID switching
-
-	COPY_TO_CLIENT();
 
 	return true;
 }
@@ -1143,6 +983,28 @@ bool cConnection::HandleServerEntityMetadata(void)
 	if (!ParseMetadata(m_ServerBuffer, Metadata))
 	{
 		return false;
+	}
+
+	if (EntityID == m_ServerEntityID)
+	{
+		m_ServerBuffer.CommitRead();
+
+		// Send the same packet, but with modified Entity ID:
+		cByteBuffer Packet(512);
+		Packet.WriteByte(0x1C);
+		Packet.WriteBEInt(m_ClientEntityID);
+
+
+
+		AString Pkt;
+		Packet.ReadAll(Pkt);
+		cByteBuffer ToClient(512);
+		ToClient.WriteVarUTF8String(Pkt);
+		CLIENTSEND(ToClient);
+	}
+	else
+	{
+		COPY_TO_CLIENT();
 	}
 
 	// TODO: Add entity ID switching
@@ -1370,45 +1232,6 @@ bool cConnection::HandleServerEntityVelocity(void)
 
 
 
-bool cConnection::HandleServerExplosion(void)
-{
-	HANDLE_SERVER_PACKET_READ(ReadBEFloat, float, PosX);
-	HANDLE_SERVER_PACKET_READ(ReadBEFloat, float, PosY);
-	HANDLE_SERVER_PACKET_READ(ReadBEFloat, float, PosZ);
-	HANDLE_SERVER_PACKET_READ(ReadBEFloat, float, Force);
-	HANDLE_SERVER_PACKET_READ(ReadBEInt,   int,   NumRecords);
-	for (int i = 0; i < NumRecords; i++)
-	{
-		HANDLE_SERVER_PACKET_READ(ReadChar, char, rx);
-		HANDLE_SERVER_PACKET_READ(ReadChar, char, ry);
-		HANDLE_SERVER_PACKET_READ(ReadChar, char, rz);
-	}
-	HANDLE_SERVER_PACKET_READ(ReadBEFloat, float, PlayerMotionX);
-	HANDLE_SERVER_PACKET_READ(ReadBEFloat, float, PlayerMotionY);
-	HANDLE_SERVER_PACKET_READ(ReadBEFloat, float, PlayerMotionZ);
-
-	COPY_TO_CLIENT();
-	return true;
-}
-
-
-
-
-
-bool cConnection::HandleServerIncrementStatistic(void)
-{
-	// 0xc8
-	HANDLE_SERVER_PACKET_READ(ReadBEInt, int, StatisticID);
-	HANDLE_SERVER_PACKET_READ(ReadBEInt, int, Amount);
-
-	COPY_TO_CLIENT();
-	return true;
-}
-
-
-
-
-
 bool cConnection::HandleServerJoinGame(void)
 {
 	HANDLE_SERVER_PACKET_READ(ReadBEInt,         int,     EntityID);
@@ -1465,175 +1288,6 @@ bool cConnection::HandleServerJoinGame(void)
 
 
 
-bool cConnection::HandleServerKeepAlive(void)
-{
-	HANDLE_SERVER_PACKET_READ(ReadBEInt, int, PingID);
-
-	COPY_TO_CLIENT()
-	return true;
-}
-
-
-
-
-
-bool cConnection::HandleServerKick(void)
-{
-	HANDLE_SERVER_PACKET_READ(ReadVarUTF8String, AString, Reason);
-	if (m_HasClientPinged)
-	{
-		AStringVector Split;
-		
-		// Split by NULL chars (StringSplit() won't work here):
-		size_t Last = 0;
-		size_t Len = Reason.size();
-		for (size_t i = 0; i < Len; i++)
-		{
-			if (Reason[i] == 0)
-			{
-				Split.push_back(Reason.substr(Last, i - Last));
-				Last = i + 1;
-			}
-		}
-		if (Last < Len)
-		{
-			Split.push_back(Reason.substr(Last));
-		}
-		
-		if (Split.size() == 6)
-		{
-			// Modify the MOTD to show that it's being MCProxied:
-			Reason.assign(Split[0]);
-			Reason.push_back(0);
-			Reason.append(Split[1]);
-			Reason.push_back(0);
-			Reason.append(Split[2]);
-			Reason.push_back(0);
-			Reason.append(Printf("MCProxy: %s", Split[3].c_str()));
-			Reason.push_back(0);
-			Reason.append(Split[4]);
-			Reason.push_back(0);
-			Reason.append(Split[5]);
-			AString ReasonBE16;
-			UTF8ToRawBEUTF16(Reason.data(), Reason.size(), ReasonBE16);
-			AString PacketStart("\xff");
-			PacketStart.push_back((ReasonBE16.size() / 2) / 256);
-			PacketStart.push_back((ReasonBE16.size() / 2) % 256);
-			CLIENTSEND(PacketStart.data(), PacketStart.size());
-			CLIENTSEND(ReasonBE16.data(), ReasonBE16.size());
-			return true;
-		}
-	}
-
-	COPY_TO_CLIENT();
-	return true;
-}
-
-
-
-
-
-bool cConnection::HandleServerMapChunk(void)
-{
-	HANDLE_SERVER_PACKET_READ(ReadBEInt,   int,   ChunkX);
-	HANDLE_SERVER_PACKET_READ(ReadBEInt,   int,   ChunkZ);
-	HANDLE_SERVER_PACKET_READ(ReadChar,    char,  IsContiguous);
-	HANDLE_SERVER_PACKET_READ(ReadBEShort, short, PrimaryBitmap);
-	HANDLE_SERVER_PACKET_READ(ReadBEShort, short, AdditionalBitmap);
-	HANDLE_SERVER_PACKET_READ(ReadBEInt,   int,   CompressedSize);
-	AString CompressedData;
-	if (!m_ServerBuffer.ReadString(CompressedData, CompressedSize))
-	{
-		return false;
-	}
-	
-	COPY_TO_CLIENT()
-	return true;
-}
-
-
-
-
-
-bool cConnection::HandleServerMapChunkBulk(void)
-{
-	HANDLE_SERVER_PACKET_READ(ReadBEShort, short, ChunkCount);
-	HANDLE_SERVER_PACKET_READ(ReadBEInt,   int,   CompressedSize);
-	HANDLE_SERVER_PACKET_READ(ReadBool,    bool,  IsSkyLightSent);
-	AString CompressedData;
-	if (!m_ServerBuffer.ReadString(CompressedData, CompressedSize))
-	{
-		return false;
-	}
-	
-	// Read individual chunk metas.
-	for (short i = 0; i < ChunkCount; i++)
-	{
-		HANDLE_SERVER_PACKET_READ(ReadBEInt,   int,   ChunkX);
-		HANDLE_SERVER_PACKET_READ(ReadBEInt,   int,   ChunkZ);
-		HANDLE_SERVER_PACKET_READ(ReadBEShort, short, PrimaryBitmap);
-		HANDLE_SERVER_PACKET_READ(ReadBEShort, short, AddBitmap);
-	}
-	
-	COPY_TO_CLIENT();
-	return true;
-}
-
-
-
-
-
-bool cConnection::HandleServerMultiBlockChange(void)
-{
-	HANDLE_SERVER_PACKET_READ(ReadBEInt,   int,   ChunkX);
-	HANDLE_SERVER_PACKET_READ(ReadBEInt,   int,   ChunkZ);
-	HANDLE_SERVER_PACKET_READ(ReadBEShort, short, NumBlocks);
-	HANDLE_SERVER_PACKET_READ(ReadBEInt,   int,   DataSize);
-	AString BlockChangeData;
-	if (!m_ServerBuffer.ReadString(BlockChangeData, DataSize))
-	{
-		return false;
-	}
-
-	COPY_TO_CLIENT();
-	return true;
-}
-
-
-
-
-
-bool cConnection::HandleServerNamedSoundEffect(void)
-{
-	HANDLE_SERVER_PACKET_READ(ReadVarUTF8String, AString, SoundName);
-	HANDLE_SERVER_PACKET_READ(ReadBEInt,         int,     PosX);
-	HANDLE_SERVER_PACKET_READ(ReadBEInt,         int,     PosY);
-	HANDLE_SERVER_PACKET_READ(ReadBEInt,         int,     PosZ);
-	HANDLE_SERVER_PACKET_READ(ReadBEFloat,       float,   Volume);
-	HANDLE_SERVER_PACKET_READ(ReadByte,          Byte,    Pitch);
-
-	COPY_TO_CLIENT();
-	return true;
-}
-
-
-
-
-
-bool cConnection::HandleServerPlayerAbilities(void)
-{
-	HANDLE_SERVER_PACKET_READ(ReadChar, char, Flags);
-	HANDLE_SERVER_PACKET_READ(ReadBEFloat, float, FlyingSpeed);
-	HANDLE_SERVER_PACKET_READ(ReadBEFloat, float, WalkingSpeed);
-
-	COPY_TO_CLIENT();
-	return true;
-}
-
-
-
-
-
 bool cConnection::HandleServerPlayerAnimation(void)
 {
 	HANDLE_SERVER_PACKET_READ(ReadVarInt, UInt32, PlayerID);
@@ -1659,422 +1313,6 @@ bool cConnection::HandleServerPlayerAnimation(void)
 		COPY_TO_CLIENT();
 	}
 
-	return true;
-}
-
-
-
-
-
-bool cConnection::HandleServerPlayerListItem(void)
-{
-	HANDLE_SERVER_PACKET_READ(ReadVarUTF8String, AString, PlayerName);
-	HANDLE_SERVER_PACKET_READ(ReadChar,            char,    IsOnline);
-	HANDLE_SERVER_PACKET_READ(ReadBEShort,         short,   Ping);
-
-	COPY_TO_CLIENT();
-	return true;
-}
-
-
-
-
-
-bool cConnection::HandleServerPlayerPositionLook(void)
-{
-	HANDLE_SERVER_PACKET_READ(ReadBEDouble, double, PosX);
-	HANDLE_SERVER_PACKET_READ(ReadBEDouble, double, PosY);
-	HANDLE_SERVER_PACKET_READ(ReadBEDouble, double, PosZ);
-	HANDLE_SERVER_PACKET_READ(ReadBEFloat,  float,  Yaw);
-	HANDLE_SERVER_PACKET_READ(ReadBEFloat,  float,  Pitch);
-	HANDLE_SERVER_PACKET_READ(ReadChar,     char,   IsOnGround);
-	
-	COPY_TO_CLIENT();
-	return true;
-}
-
-
-
-
-
-bool cConnection::HandleServerPluginMessage(void)
-{
-	HANDLE_SERVER_PACKET_READ(ReadVarUTF8String, AString, ChannelName);
-	HANDLE_SERVER_PACKET_READ(ReadBEShort,         short,   Length);
-	AString Data;
-	if (!m_ServerBuffer.ReadString(Data, Length))
-	{
-		return false;
-	}
-
-	COPY_TO_CLIENT();
-	return true;
-}
-
-
-
-
-
-bool cConnection::HandleServerRespawn(void)
-{
-	HANDLE_SERVER_PACKET_READ(ReadBEInt,         int,     Dimension);
-	HANDLE_SERVER_PACKET_READ(ReadChar,          char,    Difficulty);
-	HANDLE_SERVER_PACKET_READ(ReadChar,          char,    GameMode);
-	HANDLE_SERVER_PACKET_READ(ReadVarUTF8String, AString, LevelType);
-
-	COPY_TO_CLIENT();
-	return true;
-}
-
-
-
-
-
-bool cConnection::HandleServerSetExperience(void)
-{
-	HANDLE_SERVER_PACKET_READ(ReadBEFloat, float, ExperienceBar);
-	HANDLE_SERVER_PACKET_READ(ReadBEShort, short, Level);
-	HANDLE_SERVER_PACKET_READ(ReadBEShort, short, TotalExperience);
-
-	COPY_TO_CLIENT();
-	return true;
-}
-
-
-
-
-
-bool cConnection::HandleServerSetSlot(void)
-{
-	HANDLE_SERVER_PACKET_READ(ReadChar,    char,  WindowID);
-	HANDLE_SERVER_PACKET_READ(ReadBEShort, short, SlotNum);
-	AString Item;
-	if (!ParseSlot(m_ServerBuffer, Item))
-	{
-		return false;
-	}
-
-	COPY_TO_CLIENT();
-	return true;
-}
-
-
-
-
-
-bool cConnection::HandleServerSlotSelect(void)
-{
-	HANDLE_SERVER_PACKET_READ(ReadByte, Byte, SlotNum);
-
-	COPY_TO_CLIENT();
-	return true;
-}
-
-
-
-
-
-bool cConnection::HandleServerSoundEffect(void)
-{
-	HANDLE_SERVER_PACKET_READ(ReadBEInt,   int,   EffectID);
-	HANDLE_SERVER_PACKET_READ(ReadBEInt,   int,   PosX);
-	HANDLE_SERVER_PACKET_READ(ReadByte,    Byte,  PosY);
-	HANDLE_SERVER_PACKET_READ(ReadBEInt,   int,   PosZ);
-	HANDLE_SERVER_PACKET_READ(ReadBEInt,   int,   Data);
-	HANDLE_SERVER_PACKET_READ(ReadByte,    Byte,  NoVolumeDecrease);
-
-	COPY_TO_CLIENT();
-	return true;
-}
-
-
-
-
-
-bool cConnection::HandleServerSpawnExperienceOrbs(void)
-{
-	HANDLE_SERVER_PACKET_READ(ReadVarInt,  UInt32, EntityID);
-	HANDLE_SERVER_PACKET_READ(ReadBEInt,   int,    PosX);
-	HANDLE_SERVER_PACKET_READ(ReadBEInt,   int,    PosY);
-	HANDLE_SERVER_PACKET_READ(ReadBEInt,   int,    PosZ);
-	HANDLE_SERVER_PACKET_READ(ReadBEShort, short,  Count);
-
-	if (EntityID == m_ServerEntityID)
-	{
-		m_ServerBuffer.CommitRead();
-
-		// Send the same packet, but with modified Entity ID:
-		cByteBuffer Packet(512);
-		Packet.WriteByte(0x11);
-		Packet.WriteVarInt(m_ClientEntityID);
-		Packet.WriteBEInt(PosX);
-		Packet.WriteBEInt(PosY);
-		Packet.WriteBEInt(PosZ);
-		Packet.WriteBEShort(Count);
-		AString Pkt;
-		Packet.ReadAll(Pkt);
-		cByteBuffer ToClient(512);
-		ToClient.WriteVarUTF8String(Pkt);
-		CLIENTSEND(ToClient);
-	}
-	else
-	{
-		COPY_TO_CLIENT();
-	}
-
-	return true;
-}
-
-
-
-
-
-bool cConnection::HandleServerSpawnMob(void)
-{
-	HANDLE_SERVER_PACKET_READ(ReadVarInt,  UInt32, EntityID);
-	HANDLE_SERVER_PACKET_READ(ReadChar,    char,   MobType);
-	HANDLE_SERVER_PACKET_READ(ReadBEInt,   int,    PosX);
-	HANDLE_SERVER_PACKET_READ(ReadBEInt,   int,    PosY);
-	HANDLE_SERVER_PACKET_READ(ReadBEInt,   int,    PosZ);
-	HANDLE_SERVER_PACKET_READ(ReadByte,    Byte,   Yaw);
-	HANDLE_SERVER_PACKET_READ(ReadByte,    Byte,   Pitch);
-	HANDLE_SERVER_PACKET_READ(ReadByte,    Byte,   HeadYaw);
-	HANDLE_SERVER_PACKET_READ(ReadBEShort, short,  VelocityX);
-	HANDLE_SERVER_PACKET_READ(ReadBEShort, short,  VelocityY);
-	HANDLE_SERVER_PACKET_READ(ReadBEShort, short,  VelocityZ);
-	AString Metadata;
-	if (!ParseMetadata(m_ServerBuffer, Metadata))
-	{
-		return false;
-	}
-
-	// TODO: Add Entity ID Switching
-
-
-	COPY_TO_CLIENT();
-
-	return true;
-}
-
-
-
-
-
-bool cConnection::HandleServerSpawnNamedEntity(void)
-{
-	HANDLE_SERVER_PACKET_READ(ReadVarInt,        UInt32,  EntityID);
-	HANDLE_SERVER_PACKET_READ(ReadVarUTF8String, AString, EntityUUID);
-	HANDLE_SERVER_PACKET_READ(ReadVarUTF8String, AString, EntityName);
-	HANDLE_SERVER_PACKET_READ(ReadVarInt,        UInt32,  DataCount);
-	for (UInt32 i = 0; i < DataCount; i++)
-	{
-		HANDLE_SERVER_PACKET_READ(ReadVarUTF8String, AString, Name)
-		HANDLE_SERVER_PACKET_READ(ReadVarUTF8String, AString, Value)
-		HANDLE_SERVER_PACKET_READ(ReadVarUTF8String, AString, Signature)
-	}
-	HANDLE_SERVER_PACKET_READ(ReadBEInt,         int,     PosX);
-	HANDLE_SERVER_PACKET_READ(ReadBEInt,         int,     PosY);
-	HANDLE_SERVER_PACKET_READ(ReadBEInt,         int,     PosZ);
-	HANDLE_SERVER_PACKET_READ(ReadByte,          Byte,    Yaw);
-	HANDLE_SERVER_PACKET_READ(ReadByte,          Byte,    Pitch);
-	HANDLE_SERVER_PACKET_READ(ReadBEShort,       short,   CurrentItem);
-	AString Metadata;
-	if (!ParseMetadata(m_ServerBuffer, Metadata))
-	{
-		return false;
-	}
-
-
-	// TODO: Add entity ID switching
-
-
-	COPY_TO_CLIENT();
-	return true;
-}
-
-
-
-
-
-bool cConnection::HandleServerSpawnObjectVehicle(void)
-{
-	#ifdef _DEBUG
-	// DEBUG:
-	// This packet is still troublesome when DataIndicator != 0
-	AString Buffer;
-	m_ServerBuffer.ResetRead();
-	m_ServerBuffer.ReadAll(Buffer);
-	m_ServerBuffer.ResetRead();
-	UInt32 PacketLen, PacketType;
-	m_ServerBuffer.ReadVarInt(PacketLen);
-	m_ServerBuffer.ReadVarInt(PacketType);
-	if (Buffer.size() > 128)
-	{
-		// Only log up to 128 bytes
-		Buffer.erase(128, AString::npos);
-	}
-	#endif  // _DEBUG
-	
-	HANDLE_SERVER_PACKET_READ(ReadVarInt,  UInt32, EntityID);
-	HANDLE_SERVER_PACKET_READ(ReadByte,    Byte,   ObjType);
-	HANDLE_SERVER_PACKET_READ(ReadBEInt,   int,    PosX);
-	HANDLE_SERVER_PACKET_READ(ReadBEInt,   int,    PosY);
-	HANDLE_SERVER_PACKET_READ(ReadBEInt,   int,    PosZ);
-	HANDLE_SERVER_PACKET_READ(ReadByte,    Byte,   Pitch);
-	HANDLE_SERVER_PACKET_READ(ReadByte,    Byte,   Yaw);
-	HANDLE_SERVER_PACKET_READ(ReadBEInt,   int,    DataIndicator);
-	AString ExtraData;
-	short VelocityX = 0;
-	short VelocityY = 0;
-	short VelocityZ = 0;
-
-	if (DataIndicator != 0)
-	{
-		HANDLE_SERVER_PACKET_READ(ReadBEShort, short, SpeedX);
-		HANDLE_SERVER_PACKET_READ(ReadBEShort, short, SpeedY);
-		HANDLE_SERVER_PACKET_READ(ReadBEShort, short, SpeedZ);
-		VelocityX = SpeedX; VelocityY = SpeedY; VelocityZ = SpeedZ;  // Speed vars are local to this scope, but we need them available later
-		/*
-		// This doesn't seem to work - for a falling block I'm getting no extra data at all
-		int ExtraLen = 0;
-		switch (ObjType)
-		{
-			case OBJECT_FALLING_BLOCK: ExtraLen = 4; break;  // int: BlockType | (BlockMeta << 12)
-			case OBJECT_ARROW:
-			case OBJECT_SNOWBALL:
-			case OBJECT_EGG:
-			case OBJECT_EYE_OF_ENDER:
-			case OBJECT_DRAGON_EGG:
-			case OBJECT_FISHING_FLOAT:
-			{
-				ExtraLen = 4; break;  // int: EntityID of the thrower
-			}
-			// TODO: Splash potions
-		}
-		if ((ExtraLen > 0) && !m_ServerBuffer.ReadString(ExtraData, ExtraLen))
-		{
-			return false;
-		}
-		*/
-	}
-
-	if (EntityID == m_ServerEntityID)
-	{
-		m_ServerBuffer.CommitRead();
-
-		// Send the same packet, but with modified Entity ID:
-		cByteBuffer Packet(512);
-		Packet.WriteByte(0x0E);
-		Packet.WriteVarInt(m_ClientEntityID);
-		Packet.WriteByte(ObjType);
-		Packet.WriteBEInt(PosX);
-		Packet.WriteBEInt(PosY);
-		Packet.WriteBEInt(PosZ);
-		Packet.WriteByte(Pitch);
-		Packet.WriteByte(Yaw);
-		Packet.WriteBEInt(DataIndicator);
-
-		if (DataIndicator != 0)
-		{
-			Packet.WriteBEShort(VelocityX);
-			Packet.WriteBEShort(VelocityY);
-			Packet.WriteBEShort(VelocityZ);
-		}
-
-		AString Pkt;
-		Packet.ReadAll(Pkt);
-		cByteBuffer ToClient(512);
-		ToClient.WriteVarUTF8String(Pkt);
-		CLIENTSEND(ToClient);
-	}
-	else
-	{
-		COPY_TO_CLIENT();
-	}
-
-	return true;
-}
-
-
-
-
-
-bool cConnection::HandleServerSpawnPainting(void)
-{
-	HANDLE_SERVER_PACKET_READ(ReadVarInt,        UInt32,  EntityID);
-	HANDLE_SERVER_PACKET_READ(ReadVarUTF8String, AString, ImageName);
-	HANDLE_SERVER_PACKET_READ(ReadBEInt,         int,     PosX);
-	HANDLE_SERVER_PACKET_READ(ReadBEInt,         int,     PosY);
-	HANDLE_SERVER_PACKET_READ(ReadBEInt,         int,     PosZ);
-	HANDLE_SERVER_PACKET_READ(ReadBEInt,         int,     Direction);
-
-	if (EntityID == m_ServerEntityID)
-	{
-		m_ServerBuffer.CommitRead();
-
-		// Send the same packet, but with modified Entity ID:
-		cByteBuffer Packet(512);
-		Packet.WriteByte(0x10);
-		Packet.WriteVarInt(m_ClientEntityID);
-		Packet.WriteVarUTF8String(ImageName);
-		Packet.WriteBEInt(PosX);
-		Packet.WriteBEInt(PosY);
-		Packet.WriteBEInt(PosZ);
-		Packet.WriteBEInt(Direction);
-		AString Pkt;
-		Packet.ReadAll(Pkt);
-		cByteBuffer ToClient(512);
-		ToClient.WriteVarUTF8String(Pkt);
-		CLIENTSEND(ToClient);
-	}
-	else
-	{
-		COPY_TO_CLIENT();
-	}
-
-	return true;
-}
-
-
-
-
-
-bool cConnection::HandleServerSpawnPickup(void)
-{
-	HANDLE_SERVER_PACKET_READ(ReadBEInt,   int,   EntityID);
-	AString ItemDesc;
-	if (!ParseSlot(m_ServerBuffer, ItemDesc))
-	{
-		return false;
-	}
-	HANDLE_SERVER_PACKET_READ(ReadBEInt,   int,   PosX);
-	HANDLE_SERVER_PACKET_READ(ReadBEInt,   int,   PosY);
-	HANDLE_SERVER_PACKET_READ(ReadBEInt,   int,   PosZ);
-	HANDLE_SERVER_PACKET_READ(ReadByte,    Byte,  Rotation);
-	HANDLE_SERVER_PACKET_READ(ReadByte,    Byte,  Pitch);
-	HANDLE_SERVER_PACKET_READ(ReadByte,    Byte,  Roll);
-
-
-	// TODO: Add Entity ID switching
-
-
-	COPY_TO_CLIENT();
-	return true;
-}
-
-
-
-
-
-bool cConnection::HandleServerStatistics(void)
-{
-	HANDLE_SERVER_PACKET_READ(ReadVarInt, UInt32, NumEntries);
-	for (UInt32 i = 0; i < NumEntries; i++)
-	{
-		HANDLE_SERVER_PACKET_READ(ReadVarUTF8String, AString, StatName);
-		HANDLE_SERVER_PACKET_READ(ReadVarInt,        UInt32,  StatValue);
-	}
-	COPY_TO_CLIENT();
 	return true;
 }
 
@@ -2119,86 +1357,6 @@ bool cConnection::HandleServerStatusResponse(void)
 
 
 
-bool cConnection::HandleServerTabCompletion(void)
-{
-	HANDLE_SERVER_PACKET_READ(ReadVarInt,        UInt32,  NumResults);
-	HANDLE_SERVER_PACKET_READ(ReadVarUTF8String, AString, Results);
-
-	COPY_TO_CLIENT();
-	return true;
-}
-
-
-
-
-
-bool cConnection::HandleServerTimeUpdate(void)
-{
-	HANDLE_SERVER_PACKET_READ(ReadBEInt64, Int64, WorldAge);
-	HANDLE_SERVER_PACKET_READ(ReadBEInt64, Int64, TimeOfDay);
-
-	COPY_TO_CLIENT();
-	return true;
-}
-
-
-
-
-
-bool cConnection::HandleServerUpdateHealth(void)
-{
-	HANDLE_SERVER_PACKET_READ(ReadBEFloat, float, Health);
-	HANDLE_SERVER_PACKET_READ(ReadBEShort, short, Food);
-	HANDLE_SERVER_PACKET_READ(ReadBEFloat, float, Saturation);
-
-	COPY_TO_CLIENT();
-	return true;
-}
-
-
-
-
-
-bool cConnection::HandleServerUpdateSign(void)
-{
-	HANDLE_SERVER_PACKET_READ(ReadBEInt,           int,   BlockX);
-	HANDLE_SERVER_PACKET_READ(ReadBEShort,         short, BlockY);
-	HANDLE_SERVER_PACKET_READ(ReadBEInt,           int,   BlockZ);
-	HANDLE_SERVER_PACKET_READ(ReadVarUTF8String, AString, Line1);
-	HANDLE_SERVER_PACKET_READ(ReadVarUTF8String, AString, Line2);
-	HANDLE_SERVER_PACKET_READ(ReadVarUTF8String, AString, Line3);
-	HANDLE_SERVER_PACKET_READ(ReadVarUTF8String, AString, Line4);
-
-	COPY_TO_CLIENT();
-	return true;
-}
-
-
-
-
-
-bool cConnection::HandleServerUpdateTileEntity(void)
-{
-	HANDLE_SERVER_PACKET_READ(ReadBEInt,   int,   BlockX);
-	HANDLE_SERVER_PACKET_READ(ReadBEShort, short, BlockY);
-	HANDLE_SERVER_PACKET_READ(ReadBEInt,   int,   BlockZ);
-	HANDLE_SERVER_PACKET_READ(ReadByte,    Byte,  Action);
-	HANDLE_SERVER_PACKET_READ(ReadBEShort, short, DataLength);	
-
-	AString Data;
-	if ((DataLength > 0) && !m_ServerBuffer.ReadString(Data, DataLength))
-	{
-		return false;
-	}
-
-	COPY_TO_CLIENT();
-	return true;
-}
-
-
-
-
-
 bool cConnection::HandleServerUseBed(void)
 {
 	HANDLE_SERVER_PACKET_READ(ReadBEInt, int,  EntityID);
@@ -2228,61 +1386,6 @@ bool cConnection::HandleServerUseBed(void)
 		COPY_TO_CLIENT();
 	}
 
-	return true;
-}
-
-
-
-
-
-bool cConnection::HandleServerWindowClose(void)
-{
-	HANDLE_SERVER_PACKET_READ(ReadChar, char, WindowID);
-
-	COPY_TO_CLIENT();
-	return true;
-}
-
-
-
-
-
-bool cConnection::HandleServerWindowContents(void)
-{
-	HANDLE_SERVER_PACKET_READ(ReadChar, char, WindowID);
-	HANDLE_SERVER_PACKET_READ(ReadBEShort, short, NumSlots);
-
-	AStringVector Items;
-	for (short i = 0; i < NumSlots; i++)
-	{
-		AString Item;
-		if (!ParseSlot(m_ServerBuffer, Item))
-		{
-			return false;
-		}
-	}
-
-	COPY_TO_CLIENT();
-	return true;
-}
-
-
-
-
-
-bool cConnection::HandleServerWindowOpen(void)
-{
-	HANDLE_SERVER_PACKET_READ(ReadChar,            char,    WindowID);
-	HANDLE_SERVER_PACKET_READ(ReadChar,            char,    WindowType);
-	HANDLE_SERVER_PACKET_READ(ReadVarUTF8String, AString, Title);
-	HANDLE_SERVER_PACKET_READ(ReadByte,            Byte,    NumSlots);
-	HANDLE_SERVER_PACKET_READ(ReadByte,            Byte,    UseProvidedTitle);
-	if (WindowType == 11)  // Horse / Donkey / Mule
-	{
-		HANDLE_SERVER_PACKET_READ(ReadBEInt, int, intHorseInt);
-	}
-
-	COPY_TO_CLIENT();
 	return true;
 }
 
@@ -2439,7 +1542,7 @@ bool cConnection::ParseMetadata(cByteBuffer & a_Buffer, AString & a_Metadata)
 	while (x != 0x7f)
 	{
 		// int Index = ((unsigned)((unsigned char)x)) & 0x1f;  // Lower 5 bits = index
-		int Type  = ((unsigned)((unsigned char)x)) >> 5;    // Upper 3 bits = type
+		int Type = ((unsigned)((unsigned char)x)) >> 5;    // Upper 3 bits = type
 		int Length = 0;
 		switch (Type)
 		{

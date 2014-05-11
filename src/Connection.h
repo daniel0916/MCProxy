@@ -64,6 +64,7 @@ class cConnection :
 	typedef std::vector<AString> cTeams;
 	cTeams m_Teams;
 
+	AString m_UserName;
 	
 public:
 	cConnection(cSocket a_ClientSocket, cSocket a_ServerSocket, cServer & a_Server);
@@ -84,9 +85,6 @@ protected:
 	cAesCfb128Encryptor m_ServerEncryptor;
 
 	AString m_ServerEncryptionBuffer;  // Buffer for the data to be sent to the server once encryption is established
-	
-	/// Set to true when PACKET_PING is received from the client; will cause special parsing for server kick
-	bool m_HasClientPinged;
 	
 	/*
 	The protocol states can be one of:
@@ -138,7 +136,6 @@ protected:
 	bool HandleClientChatMessage(void);
 	bool HandleClientEntityAction(void);
 	bool HandleClientPlayerOnGround(void);
-	bool HandleClientUseEntity(void);
 	
 	bool HandleClientUnknownPacket(UInt32 a_PacketType, UInt32 a_PacketLen, UInt32 a_PacketReadSoFar);
 
@@ -149,15 +146,8 @@ protected:
 
 	// Packet handling, server-side, game:
 	bool HandleServerAttachEntity(void);
-	bool HandleServerBlockAction(void);
-	bool HandleServerBlockChange(void);
-	bool HandleServerChangeGameState(void);
-	bool HandleServerChatMessage(void);
 	bool HandleServerCollectPickup(void);
-	bool HandleServerCompass(void);
-	bool HandleServerDestroyEntities(void);
 	bool HandleServerEntity(void);
-	bool HandleServerEntityEquipment(void);
 	bool HandleServerEntityHeadLook(void);
 	bool HandleServerEntityLook(void);
 	bool HandleServerEntityMetadata(void);
@@ -167,44 +157,11 @@ protected:
 	bool HandleServerEntityStatus(void);
 	bool HandleServerEntityTeleport(void);
 	bool HandleServerEntityVelocity(void);
-	bool HandleServerExplosion(void);
-	bool HandleServerIncrementStatistic(void);
 	bool HandleServerJoinGame(void);
-	bool HandleServerKeepAlive(void);
-	bool HandleServerKick(void);
-	bool HandleServerLogin(void);
-	bool HandleServerMapChunk(void);
-	bool HandleServerMapChunkBulk(void);
-	bool HandleServerMultiBlockChange(void);
-	bool HandleServerNamedSoundEffect(void);
-	bool HandleServerPlayerAbilities(void);
 	bool HandleServerPlayerAnimation(void);
-	bool HandleServerPlayerListItem(void);
-	bool HandleServerPlayerPositionLook(void);
-	bool HandleServerPluginMessage(void);
-	bool HandleServerRespawn(void);
-	bool HandleServerSetExperience(void);
-	bool HandleServerSetSlot(void);
-	bool HandleServerSlotSelect(void);
-	bool HandleServerSoundEffect(void);
-	bool HandleServerSpawnExperienceOrbs(void);
-	bool HandleServerSpawnMob(void);
-	bool HandleServerSpawnNamedEntity(void);
-	bool HandleServerSpawnObjectVehicle(void);
-	bool HandleServerSpawnPainting(void);
-	bool HandleServerSpawnPickup(void);
-	bool HandleServerStatistics(void);
 	bool HandleServerStatusPing(void);
 	bool HandleServerStatusResponse(void);
-	bool HandleServerTabCompletion(void);
-	bool HandleServerTimeUpdate(void);
-	bool HandleServerUpdateHealth(void);
-	bool HandleServerUpdateSign(void);
-	bool HandleServerUpdateTileEntity(void);
 	bool HandleServerUseBed(void);
-	bool HandleServerWindowClose(void);
-	bool HandleServerWindowContents(void);
-	bool HandleServerWindowOpen(void);
 	bool HandleServerScoreboardObjective(void);
 	bool HandleServerTeams(void);
 	
