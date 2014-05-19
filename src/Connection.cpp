@@ -17,22 +17,6 @@
 
 
 
-/// When defined, the following macro causes a sleep after each parsed packet (DEBUG-mode only)
-// #define SLEEP_AFTER_PACKET
-
-
-
-
-
-#if defined(_DEBUG) && defined(SLEEP_AFTER_PACKET)
-	#define DebugSleep Sleep
-#else
-	#define DebugSleep(X)
-#endif  // else _DEBUG
-
-
-
-
 
 #define HANDLE_CLIENT_PACKET_READ(Proc, Type, Var) \
 	Type Var; \
@@ -80,7 +64,6 @@
 				break; \
 			} \
 		} \
-		DebugSleep(50); \
 	}
 
 #define COPY_TO_CLIENT() \
@@ -108,7 +91,6 @@
 			} \
 			*/ \
 		} \
-		DebugSleep(50); \
 	}
 
 #define HANDLE_CLIENT_READ(Proc) \
