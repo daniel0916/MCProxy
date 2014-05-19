@@ -411,7 +411,7 @@ bool cConnection::DecodeServersPackets(const char * a_Data, int a_Size)
 					case 0x1a: HANDLE_SERVER_READ(HandleServerEntityStatus()); break;
 					case 0x1b: HANDLE_SERVER_READ(HandleServerAttachEntity()); break;
 					//case 0x1c: HANDLE_SERVER_READ(HandleServerEntityMetadata()); break;
-					//case 0x20: HANDLE_SERVER_READ(HandleServerEntityProperties()); break;
+					case 0x20: HANDLE_SERVER_READ(HandleServerEntityProperties()); break;
 					case 0x3b: HANDLE_SERVER_READ(HandleServerScoreboardObjective()); break;
 					case 0x3e: HANDLE_SERVER_READ(HandleServerTeams()); break;
 					default:   HANDLE_SERVER_READ(HandleServerUnknownPacket(PacketType, PacketLen, PacketReadSoFar)); break;
@@ -1049,25 +1049,69 @@ bool cConnection::HandleServerEntityProperties(void)
 {
 	HANDLE_SERVER_PACKET_READ(ReadBEInt, int, EntityID);
 	HANDLE_SERVER_PACKET_READ(ReadBEInt, int, Count);
-	
-	for (int i = 0; i < Count; i++)
+
+	if (EntityID == m_ServerEntityID)
 	{
-		HANDLE_SERVER_PACKET_READ(ReadVarUTF8String, AString, Key);
-		HANDLE_SERVER_PACKET_READ(ReadBEDouble,      double,  Value);
-		HANDLE_SERVER_PACKET_READ(ReadBEShort, short, ListLength);
-		for (short j = 0; j < ListLength; j++)
+		cByteBuffer Packet(512);
+		Packet.WriteByte(0x20);
+		Packet.WriteBEInt(m_ClientEntityID);
+		Packet.WriteBEInt(Count);
+
+		for (int i = 0; i < Count; i++)
 		{
-			HANDLE_SERVER_PACKET_READ(ReadBEInt64,  Int64,  UUIDHi);
-			HANDLE_SERVER_PACKET_READ(ReadBEInt64,  Int64,  UUIDLo);
-			HANDLE_SERVER_PACKET_READ(ReadBEDouble, double, DblVal);
-			HANDLE_SERVER_PACKET_READ(ReadByte,     Byte,   ByteVal);
-		}
-	}  // for i
+			HANDLE_SERVER_PACKET_READ(ReadVarUTF8String, AString, Key);
+			HANDLE_SERVER_PACKET_READ(ReadBEDouble, double, Value);
+			HANDLE_SERVER_PACKET_READ(ReadBEShort, short, ListLength);
 
+			Packet.WriteVarUTF8String(Key);
+			Packet.WriteBEDouble(Value);
+			Packet.WriteBEShort(ListLength);
 
-	// TODO: Switch EntityID
+			for (short j = 0; j < ListLength; j++)
+			{
+				HANDLE_SERVER_PACKET_READ(ReadBEInt64, Int64, UUIDHi);
+				HANDLE_SERVER_PACKET_READ(ReadBEInt64, Int64, UUIDLo);
+				HANDLE_SERVER_PACKET_READ(ReadBEDouble, double, DblVal);
+				HANDLE_SERVER_PACKET_READ(ReadByte, Byte, ByteVal);
 
-	COPY_TO_CLIENT();
+				Packet.WriteBEInt64(UUIDHi);
+				Packet.WriteBEInt64(UUIDLo);
+				Packet.WriteBEDouble(DblVal);
+				Packet.WriteByte(ByteVal);
+			}
+		}  // for i
+
+		m_ServerBuffer.CommitRead();
+
+		AString Pkt;
+		Packet.ReadAll(Pkt);
+		cByteBuffer ToClient(512);
+		ToClient.WriteVarUTF8String(Pkt);
+		CLIENTSEND(ToClient);
+
+		return true;
+	}
+	else
+	{
+		for (int i = 0; i < Count; i++)
+		{
+			HANDLE_SERVER_PACKET_READ(ReadVarUTF8String, AString, Key);
+			HANDLE_SERVER_PACKET_READ(ReadBEDouble, double, Value);
+			HANDLE_SERVER_PACKET_READ(ReadBEShort, short, ListLength);
+
+			for (short j = 0; j < ListLength; j++)
+			{
+				HANDLE_SERVER_PACKET_READ(ReadBEInt64, Int64, UUIDHi);
+				HANDLE_SERVER_PACKET_READ(ReadBEInt64, Int64, UUIDLo);
+				HANDLE_SERVER_PACKET_READ(ReadBEDouble, double, DblVal);
+				HANDLE_SERVER_PACKET_READ(ReadByte, Byte, ByteVal);
+			}
+		}  // for i
+
+		COPY_TO_CLIENT();
+		return true;
+	}
+
 	return true;
 }
 
