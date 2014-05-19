@@ -47,6 +47,7 @@ public:
 	AString m_MOTD;
 	int m_MaxPlayers;
 	int m_PlayerAmount;
+	AString m_FaviconData;
 
 private:
 

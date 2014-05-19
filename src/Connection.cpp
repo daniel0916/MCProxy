@@ -401,7 +401,6 @@ bool cConnection::DecodeServersPackets(const char * a_Data, int a_Size)
 				break;
 			}  // case 3 - Game
 			
-			// TODO: Move this elsewhere
 			default:
 			{
 				HANDLE_SERVER_READ(HandleServerUnknownPacket(PacketType, PacketLen, PacketReadSoFar));
@@ -595,7 +594,7 @@ bool cConnection::HandleClientChatMessage(void)
 
 		cByteBuffer HandshakePacket(512);
 		HandshakePacket.WriteByte(0x00);
-		HandshakePacket.WriteVarInt(4);
+		HandshakePacket.WriteVarInt(5);
 		HandshakePacket.WriteVarUTF8String(ServerAddress);
 		HandshakePacket.WriteBEShort(ServerPort);
 		HandshakePacket.WriteVarInt(2);
@@ -666,7 +665,11 @@ bool cConnection::HandleClientPlayerOnGround(void)
 {
 	HANDLE_CLIENT_PACKET_READ(ReadChar, char, OnGround);
 
-	if (!m_SwitchServer)
+	if (m_SwitchServer)
+	{
+		m_ClientBuffer.CommitRead();
+	}
+	else
 	{
 		COPY_TO_SERVER();
 	}
@@ -681,6 +684,8 @@ bool cConnection::HandleClientPlayerOnGround(void)
 bool cConnection::HandleClientStatusPing(void)
 {
 	HANDLE_CLIENT_PACKET_READ(ReadBEInt64, Int64, Time);
+
+	m_ClientBuffer.CommitRead();
 
 	cByteBuffer Packet(512);
 	Packet.WriteByte(0x01);
@@ -710,7 +715,7 @@ bool cConnection::HandleClientStatusRequest(void)
 		m_Server.m_MOTD.c_str()
 		);
 	AppendPrintf(Response, "\"favicon\":\"data:image/png;base64,%s\"",
-		""  // TODO: Add FavIcon support
+		m_Server.m_FaviconData.c_str()
 		);
 	Response.append("}");
 
@@ -797,6 +802,7 @@ bool cConnection::HandleServerLoginSuccess(void)
 
 	if (m_SwitchServer)
 	{
+		m_ServerBuffer.CommitRead();
 		m_ServerProtocolState = 3;
 		return true;
 	}
@@ -1304,6 +1310,8 @@ bool cConnection::HandleServerJoinGame(void)
 	}
 	else
 	{
+		m_ServerBuffer.CommitRead();
+
 		m_SwitchServer = false;
 		m_ServerEntityID = EntityID;
 

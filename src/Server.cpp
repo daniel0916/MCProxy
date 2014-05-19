@@ -7,6 +7,7 @@
 #include "Server.h"
 #include "Connection.h"
 #include "ServerConnection.h"
+#include "File.h"
 #include <iostream>
 #include <csignal>
 
@@ -149,6 +150,10 @@ int cServer::Init(void)
 
 	m_MOTD = m_Config.GetValue("Proxy", "MOTD");
 	m_MaxPlayers = m_Config.GetValueI("Proxy", "MaxPlayers");
+
+	LOGINFO("Loading favicon...");
+	m_FaviconData = Base64Encode(cFile::ReadWholeFile(FILE_IO_PREFIX + AString("favicon.png")));
+	LOGINFO(m_FaviconData.c_str());
 
 	m_ListenThread.SetReuseAddr(true);
 	if (!m_ListenThread.Initialize(Printf("%i", ListenPort)))
