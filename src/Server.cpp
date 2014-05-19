@@ -25,7 +25,7 @@ void NonCtrlHandler(int a_Signal)
 		case SIGSEGV:
 		{
 			std::signal(SIGSEGV, SIG_DFL);
-			LOGERROR("  D:    | MCServer has encountered an error and needs to close");
+			LOGERROR("  D:    | MCProxy has encountered an error and needs to close");
 			LOGERROR("Details | SIGSEGV: Segmentation fault");
 			exit(EXIT_FAILURE);
 		}
@@ -35,7 +35,7 @@ void NonCtrlHandler(int a_Signal)
 		#endif
 		{
 			std::signal(a_Signal, SIG_DFL);
-			LOGERROR("  D:    | MCServer has encountered an error and needs to close");
+			LOGERROR("  D:    | MCProxy has encountered an error and needs to close");
 			LOGERROR("Details | SIGABRT: Server self-terminated due to an internal fault");
 			exit(EXIT_FAILURE);
 		}
@@ -55,7 +55,12 @@ void NonCtrlHandler(int a_Signal)
 
 cServer::cServer(void) :
 	m_ListenThread(*this, cSocket::IPv4, "Client IPv4"),
-	m_bStop(false)
+	m_bStop(false),
+	m_MainServerAddress("localhost"),
+	m_MainServerPort(25565),
+	m_MOTD("MCProxy - A Minecraft Proxy Server"),
+	m_MaxPlayers(100),
+	m_PlayerAmount(0)
 {
 }
 
@@ -118,6 +123,8 @@ int cServer::Init(void)
 	{
 		m_Config.SetValueI("Proxy", "ListenPort", 25565);
 		m_Config.SetValue("Proxy", "MainServer", "Lobby");
+		m_Config.SetValueI("Proxy", "MaxPlayers", 100);
+		m_Config.SetValue("Proxy", "MOTD", "MCProxy - A Minecraft Proxy Server");
 		m_Config.SetValue("Servers", "Lobby", "localhost:25566");
 		m_Config.WriteFile("config.ini");
 	}
@@ -139,6 +146,9 @@ int cServer::Init(void)
 	AStringVector ServerData = StringSplit(ServerConfig, ":");
 	m_MainServerAddress = ServerData[0];
 	m_MainServerPort = atoi(ServerData[1].c_str());
+
+	m_MOTD = m_Config.GetValue("Proxy", "MOTD");
+	m_MaxPlayers = m_Config.GetValueI("Proxy", "MaxPlayers");
 
 	m_ListenThread.SetReuseAddr(true);
 	if (!m_ListenThread.Initialize(Printf("%i", ListenPort)))

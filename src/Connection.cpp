@@ -156,7 +156,9 @@ cConnection::cConnection(cSocket a_ClientSocket, cSocket a_ServerSocket, cServer
 	m_ServerProtocolState(-1),
 	m_ClientProtocolState(-1),
 	m_IsServerEncrypted(false),
-	m_SwitchServer(false)
+	m_SwitchServer(false),
+	m_AlreadyCountPlayer(false),
+	m_AlreadyRemovedPlayer(false)
 {
 }
 
@@ -373,12 +375,7 @@ bool cConnection::DecodeServersPackets(const char * a_Data, int a_Size)
 			case 1:
 			{
 				// Status query:
-				switch (PacketType)
-				{
-					case 0x00: HANDLE_SERVER_READ(HandleServerStatusResponse()); break;
-					case 0x01: HANDLE_SERVER_READ(HandleServerStatusPing());     break;
-					default:   HANDLE_SERVER_READ(HandleServerUnknownPacket(PacketType, PacketLen, PacketReadSoFar)); break;
-				}
+				HANDLE_SERVER_READ(HandleServerUnknownPacket(PacketType, PacketLen, PacketReadSoFar));
 				break;
 			}
 			
@@ -703,7 +700,15 @@ bool cConnection::HandleClientStatusPing(void)
 {
 	HANDLE_CLIENT_PACKET_READ(ReadBEInt64, Int64, Time);
 
-	COPY_TO_SERVER();
+	cByteBuffer Packet(512);
+	Packet.WriteByte(0x01);
+	Packet.WriteBEInt64(Time);
+	AString Pkt;
+	Packet.ReadAll(Pkt);
+	cByteBuffer ToClient(512);
+	ToClient.WriteVarUTF8String(Pkt);
+	CLIENTSEND(ToClient);
+
 	return true;
 }
 
@@ -713,7 +718,29 @@ bool cConnection::HandleClientStatusPing(void)
 
 bool cConnection::HandleClientStatusRequest(void)
 {
-	COPY_TO_SERVER();
+	// Send the response:
+	AString Response = "{\"version\":{\"name\":\"1.7.6\",\"protocol\":5},\"players\":{";
+	AppendPrintf(Response, "\"max\":%u,\"online\":%u,\"sample\":[]},",
+		m_Server.m_MaxPlayers,
+		m_Server.m_PlayerAmount
+		);
+	AppendPrintf(Response, "\"description\":{\"text\":\"%s\"},",
+		m_Server.m_MOTD.c_str()
+		);
+	AppendPrintf(Response, "\"favicon\":\"data:image/png;base64,%s\"",
+		""  // TODO: Add FavIcon support
+		);
+	Response.append("}");
+
+	cByteBuffer Packet(512);
+	Packet.WriteByte(0x00);
+	Packet.WriteVarUTF8String(Response);
+	AString Pkt;
+	Packet.ReadAll(Pkt);
+	cByteBuffer ToClient(512);
+	ToClient.WriteVarUTF8String(Pkt);
+	CLIENTSEND(ToClient);
+
 	return true;
 }
 
@@ -1245,6 +1272,9 @@ bool cConnection::HandleServerJoinGame(void)
 	{
 		m_ClientEntityID = EntityID;
 		m_ServerEntityID = EntityID;
+
+		m_Server.m_PlayerAmount += 1;
+		m_AlreadyCountPlayer = true;
 	}
 	else
 	{
@@ -1313,43 +1343,6 @@ bool cConnection::HandleServerPlayerAnimation(void)
 		COPY_TO_CLIENT();
 	}
 
-	return true;
-}
-
-
-
-
-bool cConnection::HandleServerStatusPing(void)
-{
-	HANDLE_SERVER_PACKET_READ(ReadBEInt64, Int64, Time);
-
-	COPY_TO_CLIENT();
-	return true;
-}
-
-
-
-
-
-bool cConnection::HandleServerStatusResponse(void)
-{
-	HANDLE_SERVER_PACKET_READ(ReadVarUTF8String, AString, Response);
-	
-	// Modify the response to show that it's being mc-proxied:
-	const char DescSearch[] = "\"description\":{\"text\":\"";
-	size_t idx = Response.find(DescSearch);
-	if (idx != AString::npos)
-	{
-		Response.assign(Response.substr(0, idx + sizeof(DescSearch) - 1) + "MCProxy: " + Response.substr(idx + sizeof(DescSearch) - 1));
-	}
-	cByteBuffer Packet(Response.size() + 50);
-	Packet.WriteVarInt(0);  // Packet type - status response
-	Packet.WriteVarUTF8String(Response);
-	AString Pkt;
-	Packet.ReadAll(Pkt);
-	cByteBuffer ToClient(Response.size() + 50);
-	ToClient.WriteVarUTF8String(Pkt);
-	CLIENTSEND(ToClient);
 	return true;
 }
 
@@ -1691,6 +1684,12 @@ void cConnection::SocketClosed(void)
 {
 	m_Server.m_SocketThreads.RemoveClient(this);
 	m_Server.m_SocketThreads.RemoveClient(m_ServerConnection);
+
+	if ((m_AlreadyCountPlayer) && (!m_AlreadyRemovedPlayer))
+	{
+		m_Server.m_PlayerAmount -= 1;
+		m_AlreadyRemovedPlayer = true;
+	}
 }
 
 

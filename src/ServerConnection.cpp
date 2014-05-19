@@ -45,5 +45,11 @@ void cServerConnection::SocketClosed(void)
 {
 	m_Server.m_SocketThreads.RemoveClient(this);
 	m_Server.m_SocketThreads.RemoveClient(m_ClientConnection);
+
+	if ((m_ClientConnection->m_AlreadyCountPlayer) && (!m_ClientConnection->m_AlreadyRemovedPlayer))
+	{
+		m_Server.m_PlayerAmount -= 1;
+		m_ClientConnection->m_AlreadyRemovedPlayer = true;
+	}
 }
 

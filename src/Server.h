@@ -44,6 +44,9 @@ public:
 	cIniFile m_Config;
 	AString m_MainServerAddress;
 	int m_MainServerPort;
+	AString m_MOTD;
+	int m_MaxPlayers;
+	int m_PlayerAmount;
 
 private:
 

@@ -75,6 +75,8 @@ public:
 	cServerConnection * m_ServerConnection;
 
 	bool m_SwitchServer;
+	bool m_AlreadyCountPlayer;
+	bool m_AlreadyRemovedPlayer;
 	
 protected:
 
@@ -159,8 +161,6 @@ protected:
 	bool HandleServerEntityVelocity(void);
 	bool HandleServerJoinGame(void);
 	bool HandleServerPlayerAnimation(void);
-	bool HandleServerStatusPing(void);
-	bool HandleServerStatusResponse(void);
 	bool HandleServerUseBed(void);
 	bool HandleServerScoreboardObjective(void);
 	bool HandleServerTeams(void);
