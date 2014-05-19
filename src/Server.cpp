@@ -153,7 +153,6 @@ int cServer::Init(void)
 
 	LOGINFO("Loading favicon...");
 	m_FaviconData = Base64Encode(cFile::ReadWholeFile(FILE_IO_PREFIX + AString("favicon.png")));
-	LOGINFO(m_FaviconData.c_str());
 
 	m_ListenThread.SetReuseAddr(true);
 	if (!m_ListenThread.Initialize(Printf("%i", ListenPort)))
