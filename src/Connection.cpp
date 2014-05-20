@@ -396,6 +396,7 @@ bool cConnection::DecodeServersPackets(const char * a_Data, int a_Size)
 					case 0x20: HANDLE_SERVER_READ(HandleServerEntityProperties()); break;
 					case 0x3b: HANDLE_SERVER_READ(HandleServerScoreboardObjective()); break;
 					case 0x3e: HANDLE_SERVER_READ(HandleServerTeams()); break;
+					case 0x38: HANDLE_SERVER_READ(HandleServerPlayerListItem()); break;
 					default:   HANDLE_SERVER_READ(HandleServerUnknownPacket(PacketType, PacketLen, PacketReadSoFar)); break;
 				}  // switch (PacketType)
 				break;
@@ -575,7 +576,7 @@ bool cConnection::HandleClientChatMessage(void)
 		{
 			cByteBuffer ScoreboardPacket(512);
 			ScoreboardPacket.WriteByte(0x3E);
-			ScoreboardPacket.WriteVarUTF8String((*it));
+			ScoreboardPacket.WriteVarUTF8String(*it);
 			ScoreboardPacket.WriteByte(1);
 			AString ScoreboardPkt;
 			ScoreboardPacket.ReadAll(ScoreboardPkt);
@@ -584,6 +585,26 @@ bool cConnection::HandleClientChatMessage(void)
 			CLIENTSEND(ScoreboardToClient);
 		}
 		m_Teams.clear();
+
+		// Remove Players from Tablist
+		for (cTabPlayers::iterator it = m_TabPlayers.begin(); it != m_TabPlayers.end(); ++it)
+		{
+			if (*it == m_UserName)
+			{
+				continue;
+			}
+			cByteBuffer TabPacket(512);
+			TabPacket.WriteByte(0x38);
+			TabPacket.WriteVarUTF8String(*it);
+			TabPacket.WriteBool(false);
+			TabPacket.WriteBEShort(0);
+			AString TabPkt;
+			TabPacket.ReadAll(TabPkt);
+			cByteBuffer TabToClient(512);
+			TabToClient.WriteVarUTF8String(TabPkt);
+			CLIENTSEND(TabToClient);
+		}
+		m_TabPlayers.clear();
 
 		cServerConnection * Server = new cServerConnection(this, m_Server);
 		m_Server.m_SocketThreads.AddClient(Socket, Server);
@@ -1487,6 +1508,36 @@ bool cConnection::HandleServerTeams(void)
 			if ((*it) == TeamName)
 			{
 				m_Teams.erase(it);
+				break;
+			}
+		}
+	}
+
+	COPY_TO_CLIENT();
+	return true;
+}
+
+
+
+
+
+bool cConnection::HandleServerPlayerListItem(void)
+{
+	HANDLE_SERVER_PACKET_READ(ReadVarUTF8String, AString, PlayerName);
+	HANDLE_SERVER_PACKET_READ(ReadBool, bool, Online);
+	HANDLE_SERVER_PACKET_READ(ReadBEShort, short, Ping);
+
+	if (Online == true)
+	{
+		m_TabPlayers.push_back(PlayerName);
+	}
+	else
+	{
+		for (cTabPlayers::iterator it = m_TabPlayers.begin(); it != m_TabPlayers.end(); ++it)
+		{
+			if (*it == PlayerName)
+			{
+				m_TabPlayers.erase(it);
 				break;
 			}
 		}

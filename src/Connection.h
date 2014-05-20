@@ -64,6 +64,9 @@ class cConnection :
 	typedef std::vector<AString> cTeams;
 	cTeams m_Teams;
 
+	typedef std::vector<AString> cTabPlayers;
+	cTabPlayers m_TabPlayers;
+
 	AString m_UserName;
 	
 public:
@@ -164,6 +167,7 @@ protected:
 	bool HandleServerUseBed(void);
 	bool HandleServerScoreboardObjective(void);
 	bool HandleServerTeams(void);
+	bool HandleServerPlayerListItem(void);
 	
 	bool HandleServerUnknownPacket(UInt32 a_PacketType, UInt32 a_PacketLen, UInt32 a_PacketReadSoFar);
 
