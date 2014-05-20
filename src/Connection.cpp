@@ -526,7 +526,7 @@ bool cConnection::HandleClientChatMessage(void)
 		AString ServerConfig = m_Server.m_Config.GetValue("Servers", ChatMessage[1]);
 		if (ServerConfig.empty())
 		{
-			// Server not available (TODO: Send a message to the client)
+			SendChatMessage("Can't load server data from config!", "c");
 			return true;
 		}
 
@@ -537,12 +537,14 @@ bool cConnection::HandleClientChatMessage(void)
 		SOCKET ServerSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 		if (ServerSocket == INVALID_SOCKET)
 		{
+			SendChatMessage("Can't connect to server!", "c");
 			return true;
 		}
 
 		cSocket Socket = cSocket(ServerSocket);
 		if (!Socket.ConnectIPv4(ServerAddress, ServerPort))
 		{
+			SendChatMessage("Can't connect to server!", "c");
 			return true;
 		}
 		
@@ -1723,6 +1725,24 @@ void cConnection::SendEncryptionKeyResponse(const AString & a_ServerPublicKey, c
 	SERVERSEND(ToServer);
 	m_ServerState = csEncryptedUnderstood;
 	m_IsServerEncrypted = true;
+}
+
+
+
+
+
+void cConnection::SendChatMessage(AString a_Message, AString a_Color)
+{
+	AString Message = "\xc2\xa7" + a_Color + a_Message;
+
+	cByteBuffer Packet(512);
+	Packet.WriteByte(0x02);
+	Packet.WriteVarUTF8String(Printf("{\"text\":\"%s\"}", EscapeString(Message).c_str()));
+	AString Pkt;
+	Packet.ReadAll(Pkt);
+	cByteBuffer ToClient(512);
+	ToClient.WriteVarUTF8String(Pkt);
+	CLIENTSEND(ToClient);
 }
 
 
