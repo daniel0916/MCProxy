@@ -1036,7 +1036,7 @@ bool cConnection::HandleServerEntityMetadata(void)
 		Packet.ReadAll(Pkt);
 		cByteBuffer ToClient(512);
 		ToClient.WriteVarUTF8String(Pkt);
-		CLIENTSEND(Packet);
+		CLIENTSEND(ToClient);
 	}
 	else
 	{
@@ -1681,7 +1681,7 @@ bool cConnection::ParseMetadata(cByteBuffer & a_Buffer, cByteBuffer & a_Packet)
 		{
 			return false;
 		}
-		a_Packet.WriteVarUTF8String(data);
+		a_Packet.Write(data.c_str(), Length);
 
 		if (!a_Buffer.ReadChar(x))
 		{
