@@ -392,7 +392,7 @@ bool cConnection::DecodeServersPackets(const char * a_Data, int a_Size)
 					case 0x19: HANDLE_SERVER_READ(HandleServerEntityHeadLook()); break;
 					case 0x1a: HANDLE_SERVER_READ(HandleServerEntityStatus()); break;
 					case 0x1b: HANDLE_SERVER_READ(HandleServerAttachEntity()); break;
-					//case 0x1c: HANDLE_SERVER_READ(HandleServerEntityMetadata()); break;
+					case 0x1c: HANDLE_SERVER_READ(HandleServerEntityMetadata()); break;
 					case 0x20: HANDLE_SERVER_READ(HandleServerEntityProperties()); break;
 					case 0x3b: HANDLE_SERVER_READ(HandleServerScoreboardObjective()); break;
 					case 0x3e: HANDLE_SERVER_READ(HandleServerTeams()); break;
@@ -1017,37 +1017,37 @@ bool cConnection::HandleServerEntityLook(void)
 bool cConnection::HandleServerEntityMetadata(void)
 {
 	HANDLE_SERVER_PACKET_READ(ReadBEInt, int, EntityID);
-	AString Metadata;
-	if (!ParseMetadata(m_ServerBuffer, Metadata))
-	{
-		return false;
-	}
 
+	cByteBuffer Packet(512);
+	
 	if (EntityID == m_ServerEntityID)
 	{
-		m_ServerBuffer.CommitRead();
-
-		// Send the same packet, but with modified Entity ID:
-		cByteBuffer Packet(512);
 		Packet.WriteByte(0x1C);
 		Packet.WriteBEInt(m_ClientEntityID);
 
+		if (!ParseMetadata(m_ServerBuffer, Packet))
+		{
+			return false;
+		}
 
+		m_ServerBuffer.CommitRead();
 
 		AString Pkt;
 		Packet.ReadAll(Pkt);
 		cByteBuffer ToClient(512);
 		ToClient.WriteVarUTF8String(Pkt);
-		CLIENTSEND(ToClient);
+		CLIENTSEND(Packet);
 	}
 	else
 	{
+		AString Metadata;
+		if (!ParseMetadata(m_ServerBuffer, Packet))
+		{
+			return false;
+		}
+
 		COPY_TO_CLIENT();
 	}
-
-	// TODO: Add entity ID switching
-
-	COPY_TO_CLIENT();
 
 	return true;
 }
@@ -1386,7 +1386,7 @@ bool cConnection::HandleServerPlayerAnimation(void)
 
 		// Send the same packet, but with modified Entity ID:
 		cByteBuffer Packet(512);
-		Packet.WriteByte(0x0A);
+		Packet.WriteByte(0x0B);
 		Packet.WriteVarInt(m_ClientEntityID);
 		Packet.WriteByte(AnimationID);
 		AString Pkt;
@@ -1570,16 +1570,17 @@ bool cConnection::HandleServerUnknownPacket(UInt32 a_PacketType, UInt32 a_Packet
 
 
 
-bool cConnection::ParseSlot(cByteBuffer & a_Buffer, AString & a_ItemDesc)
+bool cConnection::ParseSlot(cByteBuffer & a_Buffer, cByteBuffer & a_Packet)
 {
 	short ItemType;
 	if (!a_Buffer.ReadBEShort(ItemType))
 	{
 		return false;
 	}
+	a_Packet.WriteBEShort(ItemType);
+
 	if (ItemType <= 0)
 	{
-		a_ItemDesc = "<empty>";
 		return true;
 	}
 	if (!a_Buffer.CanReadBytes(5))
@@ -1592,7 +1593,11 @@ bool cConnection::ParseSlot(cByteBuffer & a_Buffer, AString & a_ItemDesc)
 	a_Buffer.ReadChar(ItemCount);
 	a_Buffer.ReadBEShort(ItemDamage);
 	a_Buffer.ReadBEShort(MetadataLength);
-	Printf(a_ItemDesc, "%d:%d * %d", ItemType, ItemDamage, ItemCount);
+
+	a_Packet.WriteChar(ItemCount);
+	a_Packet.WriteBEShort(ItemDamage);
+	a_Packet.WriteBEShort(MetadataLength);
+
 	if (MetadataLength <= 0)
 	{
 		return true;
@@ -1603,6 +1608,8 @@ bool cConnection::ParseSlot(cByteBuffer & a_Buffer, AString & a_ItemDesc)
 	{
 		return false;
 	}
+
+	a_Packet.WriteBuf((void *)Metadata.data(), MetadataLength);
 	
 	return true;
 }
@@ -1611,14 +1618,15 @@ bool cConnection::ParseSlot(cByteBuffer & a_Buffer, AString & a_ItemDesc)
 
 
 
-bool cConnection::ParseMetadata(cByteBuffer & a_Buffer, AString & a_Metadata)
+bool cConnection::ParseMetadata(cByteBuffer & a_Buffer, cByteBuffer & a_Packet)
 {
 	char x;
 	if (!a_Buffer.ReadChar(x))
 	{
 		return false;
 	}
-	a_Metadata.push_back(x);
+	a_Packet.WriteChar(x);
+
 	while (x != 0x7f)
 	{
 		// int Index = ((unsigned)((unsigned char)x)) & 0x1f;  // Lower 5 bits = index
@@ -1643,15 +1651,14 @@ bool cConnection::ParseMetadata(cByteBuffer & a_Buffer, AString & a_Metadata)
 				LenBuf.WriteVarInt(Len);
 				AString VarLen;
 				LenBuf.ReadAll(VarLen);
-				a_Metadata.append(VarLen);
+				//a_Metadata.append(VarLen);
 				Length = Len;
 				break;
 			}
 			case 5:
 			{
 				int Before = a_Buffer.GetReadableSpace();
-				AString ItemDesc;
-				if (!ParseSlot(a_Buffer, ItemDesc))
+				if (!ParseSlot(a_Buffer, a_Packet))
 				{
 					return false;
 				}
@@ -1674,12 +1681,14 @@ bool cConnection::ParseMetadata(cByteBuffer & a_Buffer, AString & a_Metadata)
 		{
 			return false;
 		}
-		a_Metadata.append(data);
+		a_Packet.WriteVarUTF8String(data);
+
 		if (!a_Buffer.ReadChar(x))
 		{
 			return false;
 		}
-		a_Metadata.push_back(x);
+		a_Packet.WriteChar(x);
+
 	}  // while (x != 0x7f)
 	return true;
 }

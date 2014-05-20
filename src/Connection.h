@@ -171,11 +171,11 @@ protected:
 	
 	bool HandleServerUnknownPacket(UInt32 a_PacketType, UInt32 a_PacketLen, UInt32 a_PacketReadSoFar);
 
-	/// Parses the slot data in a_Buffer into item description; returns true if successful, false if not enough data
-	bool ParseSlot(cByteBuffer & a_Buffer, AString & a_ItemDesc);
+	/// Parses the slot data in a_Buffer and write it to a_Packet; returns true if successful, false if not enough data
+	bool ParseSlot(cByteBuffer & a_Buffer, cByteBuffer & a_Packet);
 	
-	/// Parses the metadata in a_Buffer into raw metadata in an AString; returns true if successful, false if not enough data
-	bool ParseMetadata(cByteBuffer & a_Buffer, AString & a_Metadata);
+	/// Parses the metadata in a_Buffer and write it to a_Packet; returns true if successful, false if not enough data
+	bool ParseMetadata(cByteBuffer & a_Buffer, cByteBuffer & a_Packet);
 	
 	/// Send EKResp to the server:
 	void SendEncryptionKeyResponse(const AString & a_ServerPublicKey, const AString & a_Nonce);
