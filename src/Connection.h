@@ -66,8 +66,6 @@ class cConnection :
 
 	typedef std::vector<AString> cTabPlayers;
 	cTabPlayers m_TabPlayers;
-
-	AString m_UserName;
 	
 public:
 	cConnection(cSocket a_ClientSocket, cSocket a_ServerSocket, cServer & a_Server);
@@ -75,11 +73,17 @@ public:
 
 	bool SendToClient(const char * a_Data, size_t a_Size);
 
+	void Kick(AString a_Reason);
+
+	void Authenticate(AString a_Name);
+
 	cServerConnection * m_ServerConnection;
 
 	bool m_SwitchServer;
 	bool m_AlreadyCountPlayer;
 	bool m_AlreadyRemovedPlayer;
+
+	AString m_UserName;
 	
 protected:
 
@@ -179,11 +183,11 @@ protected:
 	
 	/// Send EKResp to the server:
 	void SendEncryptionKeyResponse(const AString & a_ServerPublicKey, const AString & a_Nonce);
-	
-	/// Starts client encryption based on the parameters received
-	void StartClientEncryption(const AString & a_EncryptedSecret, const AString & a_EncryptedNonce);
 
 	void SendChatMessage(AString a_Message, AString a_Color);
+
+	void StartEncryption(const Byte * a_Key);
+	AString m_AuthServerID;
 
 	// cSocketThreads::cCallback overrides:
 	virtual void DataReceived(const char * a_Data, size_t a_Size) override;  // Data is received from the client

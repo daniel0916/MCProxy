@@ -8,11 +8,21 @@
 #include "Connection.h"
 #include "ServerConnection.h"
 #include "File.h"
+#include "MersenneTwister.h"
 #include <iostream>
+#include <sstream>
 #include <csignal>
 
 
 bool g_TERMINATE_EVENT_RAISED = false;
+
+
+
+
+
+cServer* cServer::s_Server = NULL;
+
+
 
 
 
@@ -61,8 +71,10 @@ cServer::cServer(void) :
 	m_MainServerPort(25565),
 	m_MOTD("MCProxy - A Minecraft Proxy Server"),
 	m_MaxPlayers(100),
-	m_PlayerAmount(0)
+	m_PlayerAmount(0),
+	m_ShouldAuthenticate(true)
 {
+	s_Server = this;
 }
 
 
@@ -115,10 +127,6 @@ int cServer::Init(void)
 		}
 	#endif  // _WIN32
 
-	LOGINFO("Generating protocol encryption keypair...");
-	m_PrivateKey.Generate();
-	m_PublicKeyDER = m_PrivateKey.GetPubKeyDER();
-
 	LOGINFO("Loading config...");
 	if (!m_Config.ReadFile("config.ini"))
 	{
@@ -126,12 +134,13 @@ int cServer::Init(void)
 		m_Config.SetValue("Proxy", "MainServer", "Lobby");
 		m_Config.SetValueI("Proxy", "MaxPlayers", 100);
 		m_Config.SetValue("Proxy", "MOTD", "MCProxy - A Minecraft Proxy Server");
+		m_Config.SetValueB("Proxy", "Authenticate", true);
 		m_Config.SetValue("Servers", "Lobby", "localhost:25566");
 		m_Config.WriteFile("config.ini");
 	}
 
-	int ListenPort = m_Config.GetValueI("Proxy", "ListenPort");
-	if (ListenPort == NULL)
+	m_ListenPort = m_Config.GetValueI("Proxy", "ListenPort");
+	if (m_ListenPort == NULL)
 	{
 		LOGWARN("ListenPort is wrong");
 		return 1;
@@ -150,12 +159,31 @@ int cServer::Init(void)
 
 	m_MOTD = m_Config.GetValue("Proxy", "MOTD");
 	m_MaxPlayers = m_Config.GetValueI("Proxy", "MaxPlayers");
+	m_ShouldAuthenticate = m_Config.GetValueB("Proxy", "Authenticate");
 
 	LOGINFO("Loading favicon...");
 	m_FaviconData = Base64Encode(cFile::ReadWholeFile(FILE_IO_PREFIX + AString("favicon.png")));
 
+	LOGINFO("Generating protocol encryption keypair...");
+	m_PrivateKey.Generate();
+	m_PublicKeyDER = m_PrivateKey.GetPubKeyDER();
+	m_ServerID = "-";
+	if (m_ShouldAuthenticate)
+	{
+		MTRand mtrand1;
+		unsigned int r1 = (mtrand1.randInt() % 1147483647) + 1000000000;
+		unsigned int r2 = (mtrand1.randInt() % 1147483647) + 1000000000;
+		std::ostringstream sid;
+		sid << std::hex << r1;
+		sid << std::hex << r2;
+		m_ServerID = sid.str();
+		m_ServerID.resize(16, '0');
+	}
+
+	m_Authenticator.Start();
+
 	m_ListenThread.SetReuseAddr(true);
-	if (!m_ListenThread.Initialize(Printf("%i", ListenPort)))
+	if (!m_ListenThread.Initialize(Printf("%i", m_ListenPort)))
 	{
 		return 1;
 	}
@@ -210,6 +238,38 @@ void cServer::ExecuteConsoleCommand(const AString & a_Cmd)
 
 
 
+void cServer::AuthenticateUser(const AString & a_Name)
+{
+	for (cConnectionList::iterator itr = m_Connections.begin(); itr != m_Connections.end(); ++itr)
+	{
+		if ((*itr)->m_UserName == a_Name)
+		{
+			(*itr)->Authenticate(a_Name);
+			return;
+		}
+	}
+}
+
+
+
+
+
+void cServer::KickUser(const AString & a_Name, const AString & a_Reason)
+{
+	for (cConnectionList::iterator itr = m_Connections.begin(); itr != m_Connections.end(); ++itr)
+	{
+		if ((*itr)->m_UserName == a_Name)
+		{
+			(*itr)->Kick(a_Reason);
+			return;
+		}
+	}
+}
+
+
+
+
+
 void cServer::OnConnectionAccepted(cSocket & a_Socket)
 {
 	SOCKET ServerSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
@@ -228,8 +288,16 @@ void cServer::OnConnectionAccepted(cSocket & a_Socket)
 	cServerConnection * Server = new cServerConnection(Connection, *this);
 	Connection->m_ServerConnection = Server;
 
-	m_SocketThreads.AddClient(Socket, Server);
-	m_SocketThreads.AddClient(a_Socket, Connection);
+	if (!m_SocketThreads.AddClient(Socket, Server))
+	{
+		return;
+	}
+	if (!m_SocketThreads.AddClient(a_Socket, Connection))
+	{
+		return;
+	}
+
+	m_Connections.push_back(Connection);
 }
 
 
