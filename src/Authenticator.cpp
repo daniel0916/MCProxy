@@ -48,7 +48,7 @@ void cAuthenticator::Authenticate(const AString & a_UserName, const AString & a_
 {
 	if (!m_ShouldAuthenticate)
 	{
-		cServer::Get()->AuthenticateUser(a_UserName);
+		cServer::Get()->AuthenticateUser(a_UserName, cServer::Get()->GenerateOfflineUUID(a_UserName));
 		return;
 	}
 
@@ -112,7 +112,7 @@ void cAuthenticator::Execute(void)
 		if (AuthWithYggdrasil(NewUserName, ServerID, UUID))
 		{
 			LOGINFO("User %s authenticated with UUID '%s'", NewUserName.c_str(), UUID.c_str());
-			cServer::Get()->AuthenticateUser(NewUserName);
+			cServer::Get()->AuthenticateUser(NewUserName, UUID);
 		}
 		else
 		{

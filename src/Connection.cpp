@@ -413,6 +413,7 @@ bool cConnection::DecodeServersPackets(const char * a_Data, int a_Size)
 					case 0x3b: HANDLE_SERVER_READ(HandleServerScoreboardObjective()); break;
 					case 0x3e: HANDLE_SERVER_READ(HandleServerTeams()); break;
 					case 0x38: HANDLE_SERVER_READ(HandleServerPlayerListItem()); break;
+					case 0x3f: HANDLE_SERVER_READ(HandleServerPluginMessage()); break;
 					default:   HANDLE_SERVER_READ(HandleServerUnknownPacket(PacketType, PacketLen, PacketReadSoFar)); break;
 				}  // switch (PacketType)
 				break;
@@ -563,6 +564,8 @@ bool cConnection::HandleClientLoginStart(void)
 		return true;
 	}
 
+	m_UUID = cServer::Get()->GenerateOfflineUUID(UserName);
+
 	COPY_TO_SERVER();
 	return true;
 }
@@ -626,111 +629,9 @@ bool cConnection::HandleClientChatMessage(void)
 
 		AStringVector ServerData = StringSplit(ServerConfig, ":");
 		AString ServerAddress = ServerData[0];
-		int ServerPort = atoi(ServerData[1].c_str());
+		short ServerPort = (short)atoi(ServerData[1].c_str());
 
-		SOCKET ServerSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-		if (ServerSocket == INVALID_SOCKET)
-		{
-			SendChatMessage("Can't connect to server!", "c");
-			return true;
-		}
-
-		cSocket Socket = cSocket(ServerSocket);
-		if (!Socket.ConnectIPv4(ServerAddress, ServerPort))
-		{
-			SendChatMessage("Can't connect to server!", "c");
-			return true;
-		}
-		
-		m_SwitchServer = true;
-		m_ServerConnection->m_ShouldSend = false;
-
-		// Clear Buffers
-		AString data;
-		m_ServerBuffer.ReadAll(data);
-		m_ServerBuffer.CommitRead();
-		m_ServerEncryptionBuffer.clear();
-
-		// Remove Scoreboards
-		for (cScoreboards::iterator it = m_Scoreboards.begin(); it != m_Scoreboards.end(); ++it)
-		{
-			cByteBuffer ScoreboardPacket(512);
-			ScoreboardPacket.WriteByte(0x3B);
-			ScoreboardPacket.WriteVarUTF8String((*it).m_ObjectiveName);
-			ScoreboardPacket.WriteVarUTF8String((*it).m_ObjectiveValue);
-			ScoreboardPacket.WriteByte(1);
-			AString ScoreboardPkt;
-			ScoreboardPacket.ReadAll(ScoreboardPkt);
-			cByteBuffer ScoreboardToClient(512);
-			ScoreboardToClient.WriteVarUTF8String(ScoreboardPkt);
-			CLIENTSEND(ScoreboardToClient);
-		}
-		m_Scoreboards.clear();
-
-		// Remove Teams
-		for (cTeams::iterator it = m_Teams.begin(); it != m_Teams.end(); ++it)
-		{
-			cByteBuffer ScoreboardPacket(512);
-			ScoreboardPacket.WriteByte(0x3E);
-			ScoreboardPacket.WriteVarUTF8String(*it);
-			ScoreboardPacket.WriteByte(1);
-			AString ScoreboardPkt;
-			ScoreboardPacket.ReadAll(ScoreboardPkt);
-			cByteBuffer ScoreboardToClient(512);
-			ScoreboardToClient.WriteVarUTF8String(ScoreboardPkt);
-			CLIENTSEND(ScoreboardToClient);
-		}
-		m_Teams.clear();
-
-		// Remove Players from Tablist
-		for (cTabPlayers::iterator it = m_TabPlayers.begin(); it != m_TabPlayers.end(); ++it)
-		{
-			if (*it == m_UserName)
-			{
-				continue;
-			}
-			cByteBuffer TabPacket(512);
-			TabPacket.WriteByte(0x38);
-			TabPacket.WriteVarUTF8String(*it);
-			TabPacket.WriteBool(false);
-			TabPacket.WriteBEShort(0);
-			AString TabPkt;
-			TabPacket.ReadAll(TabPkt);
-			cByteBuffer TabToClient(512);
-			TabToClient.WriteVarUTF8String(TabPkt);
-			CLIENTSEND(TabToClient);
-		}
-		m_TabPlayers.clear();
-
-		cServerConnection * Server = new cServerConnection(this, m_Server);
-		m_Server.m_SocketThreads.AddClient(Socket, Server);
-
-		m_OldServerConnection = m_ServerConnection;
-		m_ServerConnection = Server;
-		m_ServerSocket = Socket;
-
-		cByteBuffer HandshakePacket(512);
-		HandshakePacket.WriteByte(0x00);
-		HandshakePacket.WriteVarInt(5);
-		HandshakePacket.WriteVarUTF8String(ServerAddress);
-		HandshakePacket.WriteBEShort(ServerPort);
-		HandshakePacket.WriteVarInt(2);
-		AString HandshakePkt;
-		HandshakePacket.ReadAll(HandshakePkt);
-		cByteBuffer HandshakeToServer(512);
-		HandshakeToServer.WriteVarUTF8String(HandshakePkt);
-		SERVERSEND(HandshakeToServer);
-
-		cByteBuffer LoginStartPacket(512);
-		LoginStartPacket.WriteByte(0x00);
-		LoginStartPacket.WriteVarUTF8String(m_UserName);
-		AString LoginStartPkt;
-		LoginStartPacket.ReadAll(LoginStartPkt);
-		cByteBuffer LoginStartToServer(512);
-		LoginStartToServer.WriteVarUTF8String(LoginStartPkt);
-		SERVERSEND(LoginStartToServer);
-
-		m_ServerProtocolState = 2;
+		SwitchServer(ServerAddress, ServerPort);
 
 		return true;
 	}
@@ -1627,6 +1528,82 @@ bool cConnection::HandleServerPlayerListItem(void)
 
 
 
+bool cConnection::HandleServerPluginMessage(void)
+{
+	HANDLE_SERVER_PACKET_READ(ReadVarUTF8String, AString, Channel);
+	HANDLE_SERVER_PACKET_READ(ReadBEShort, short, Length);
+	
+	AString data;
+	if (!m_ServerBuffer.ReadString(data, Length))
+	{
+		return false;
+	}
+
+	if (Channel == "MCProxy")
+	{
+		AStringVector Message = StringSplit(data, " ");
+		if (Message.size() == 0)
+		{
+			return true;
+		}
+
+		AString LowerMessage = StrToLower(Message[0]);
+		if (LowerMessage == "connect")
+		{
+			if (Message.size() > 2)
+			{
+				return true;
+			}
+
+			AString ServerConfig = m_Server.m_Config.GetValue("Servers", Message[1]);
+			if (ServerConfig.empty())
+			{
+				return true;
+			}
+
+			AStringVector ServerData = StringSplit(ServerConfig, ":");
+			AString ServerAddress = ServerData[0];
+			short ServerPort = (short)atoi(ServerData[1].c_str());
+
+			SwitchServer(ServerAddress, ServerPort);
+		}
+
+		else if (LowerMessage == "get")
+		{
+			if (Message.size() > 2)
+			{
+				return true;
+			}
+
+			AString LowerMessage2 = StrToLower(Message[1]);
+			if (LowerMessage2 == "uuid")
+			{
+				AString UUID = Printf("UUID %s", m_UUID.c_str());
+
+				cByteBuffer Packet(512);
+				Packet.WriteByte(0x17);
+				Packet.WriteVarUTF8String("MCProxy");
+				Packet.WriteBEShort((short)UUID.size());
+				Packet.WriteBuf(UUID.data(), UUID.size());
+				AString Pkt;
+				Packet.ReadAll(Pkt);
+				cByteBuffer ToServer(512);
+				ToServer.WriteVarUTF8String(Pkt);
+				SERVERSEND(ToServer);
+			}
+		}
+
+		return true;
+	}
+	
+	COPY_TO_CLIENT();
+	return true;
+}
+
+
+
+
+
 bool cConnection::HandleServerUnknownPacket(UInt32 a_PacketType, UInt32 a_PacketLen, UInt32 a_PacketReadSoFar)
 {
 	AString Data;
@@ -1770,9 +1747,10 @@ bool cConnection::ParseMetadata(cByteBuffer & a_Buffer, cByteBuffer & a_Packet)
 
 
 
-void cConnection::Authenticate(AString a_Name)
+void cConnection::Authenticate(AString a_Name, AString a_UUID)
 {
 	m_UserName = a_Name;
+	m_UUID = a_UUID;
 
 	cByteBuffer LoginStartPacket(512);
 	LoginStartPacket.WriteByte(0x00);
@@ -1800,6 +1778,117 @@ void cConnection::SendChatMessage(AString a_Message, AString a_Color)
 	cByteBuffer ToClient(512);
 	ToClient.WriteVarUTF8String(Pkt);
 	CLIENTSEND(ToClient);
+}
+
+
+
+
+
+void cConnection::SwitchServer(AString a_ServerAddress, short a_ServerPort)
+{
+	SOCKET ServerSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+	if (ServerSocket == INVALID_SOCKET)
+	{
+		SendChatMessage("Can't connect to server!", "c");
+		return;
+	}
+
+	cSocket Socket = cSocket(ServerSocket);
+	if (!Socket.ConnectIPv4(a_ServerAddress, a_ServerPort))
+	{
+		SendChatMessage("Can't connect to server!", "c");
+		return;
+	}
+
+	m_SwitchServer = true;
+	m_ServerConnection->m_ShouldSend = false;
+
+	// Clear Buffers
+	AString data;
+	m_ServerBuffer.ReadAll(data);
+	m_ServerBuffer.CommitRead();
+	m_ServerEncryptionBuffer.clear();
+
+	// Remove Scoreboards
+	for (cScoreboards::iterator it = m_Scoreboards.begin(); it != m_Scoreboards.end(); ++it)
+	{
+		cByteBuffer ScoreboardPacket(512);
+		ScoreboardPacket.WriteByte(0x3B);
+		ScoreboardPacket.WriteVarUTF8String((*it).m_ObjectiveName);
+		ScoreboardPacket.WriteVarUTF8String((*it).m_ObjectiveValue);
+		ScoreboardPacket.WriteByte(1);
+		AString ScoreboardPkt;
+		ScoreboardPacket.ReadAll(ScoreboardPkt);
+		cByteBuffer ScoreboardToClient(512);
+		ScoreboardToClient.WriteVarUTF8String(ScoreboardPkt);
+		CLIENTSEND(ScoreboardToClient);
+	}
+	m_Scoreboards.clear();
+
+	// Remove Teams
+	for (cTeams::iterator it = m_Teams.begin(); it != m_Teams.end(); ++it)
+	{
+		cByteBuffer ScoreboardPacket(512);
+		ScoreboardPacket.WriteByte(0x3E);
+		ScoreboardPacket.WriteVarUTF8String(*it);
+		ScoreboardPacket.WriteByte(1);
+		AString ScoreboardPkt;
+		ScoreboardPacket.ReadAll(ScoreboardPkt);
+		cByteBuffer ScoreboardToClient(512);
+		ScoreboardToClient.WriteVarUTF8String(ScoreboardPkt);
+		CLIENTSEND(ScoreboardToClient);
+	}
+	m_Teams.clear();
+
+	// Remove Players from Tablist
+	for (cTabPlayers::iterator it = m_TabPlayers.begin(); it != m_TabPlayers.end(); ++it)
+	{
+		if (*it == m_UserName)
+		{
+			continue;
+		}
+		cByteBuffer TabPacket(512);
+		TabPacket.WriteByte(0x38);
+		TabPacket.WriteVarUTF8String(*it);
+		TabPacket.WriteBool(false);
+		TabPacket.WriteBEShort(0);
+		AString TabPkt;
+		TabPacket.ReadAll(TabPkt);
+		cByteBuffer TabToClient(512);
+		TabToClient.WriteVarUTF8String(TabPkt);
+		CLIENTSEND(TabToClient);
+	}
+	m_TabPlayers.clear();
+
+	cServerConnection * Server = new cServerConnection(this, m_Server);
+	m_Server.m_SocketThreads.AddClient(Socket, Server);
+
+	m_OldServerConnection = m_ServerConnection;
+	m_ServerConnection = Server;
+	m_ServerSocket = Socket;
+
+	cByteBuffer HandshakePacket(512);
+	HandshakePacket.WriteByte(0x00);
+	HandshakePacket.WriteVarInt(5);
+	HandshakePacket.WriteVarUTF8String(a_ServerAddress);
+	HandshakePacket.WriteBEShort(a_ServerPort);
+	HandshakePacket.WriteVarInt(2);
+	AString HandshakePkt;
+	HandshakePacket.ReadAll(HandshakePkt);
+	cByteBuffer HandshakeToServer(512);
+	HandshakeToServer.WriteVarUTF8String(HandshakePkt);
+	SERVERSEND(HandshakeToServer);
+
+	cByteBuffer LoginStartPacket(512);
+	LoginStartPacket.WriteByte(0x00);
+	LoginStartPacket.WriteVarUTF8String(m_UserName);
+	AString LoginStartPkt;
+	LoginStartPacket.ReadAll(LoginStartPkt);
+	cByteBuffer LoginStartToServer(512);
+	LoginStartToServer.WriteVarUTF8String(LoginStartPkt);
+	SERVERSEND(LoginStartToServer);
+
+	m_ServerProtocolState = 2;
 }
 
 

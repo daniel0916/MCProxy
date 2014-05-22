@@ -12,6 +12,7 @@
 #include <iostream>
 #include <sstream>
 #include <csignal>
+#include "md5/md5.h"
 
 
 bool g_TERMINATE_EVENT_RAISED = false;
@@ -246,13 +247,13 @@ void cServer::ExecuteConsoleCommand(const AString & a_Cmd)
 
 
 
-void cServer::AuthenticateUser(const AString & a_Name)
+void cServer::AuthenticateUser(const AString & a_Name, const AString & a_UUID)
 {
 	for (cConnectionList::iterator itr = m_Connections.begin(); itr != m_Connections.end(); ++itr)
 	{
 		if ((*itr)->m_UserName == a_Name)
 		{
-			(*itr)->Authenticate(a_Name);
+			(*itr)->Authenticate(a_Name, a_UUID);
 			return;
 		}
 	}
@@ -272,6 +273,30 @@ void cServer::KickUser(const AString & a_Name, const AString & a_Reason)
 			return;
 		}
 	}
+}
+
+
+
+
+
+AString cServer::GenerateOfflineUUID(const AString & a_Username)
+{
+	// Proper format for a version 3 UUID is:
+	// xxxxxxxx-xxxx-3xxx-yxxx-xxxxxxxxxxxx where x is any hexadecimal digit and y is one of 8, 9, A, or B
+
+	// Generate an md5 checksum, and use it as base for the ID:
+	MD5 Checksum(a_Username);
+	AString UUID = Checksum.hexdigest();
+	UUID[12] = '3';  // Version 3 UUID
+	UUID[16] = '8';  // Variant 1 UUID
+
+	// Now the digest doesn't have the UUID slashes, but the client requires them, so add them into the appropriate positions:
+	UUID.insert(8, "-");
+	UUID.insert(13, "-");
+	UUID.insert(18, "-");
+	UUID.insert(23, "-");
+
+	return UUID;
 }
 
 

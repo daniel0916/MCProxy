@@ -75,7 +75,7 @@ public:
 
 	void Kick(AString a_Reason);
 
-	void Authenticate(AString a_Name);
+	void Authenticate(AString a_Name, AString a_UUID);
 
 	cServerConnection * m_ServerConnection;
 
@@ -84,6 +84,7 @@ public:
 	bool m_AlreadyRemovedPlayer;
 
 	AString m_UserName;
+	AString m_UUID;
 	
 protected:
 
@@ -179,6 +180,7 @@ protected:
 	bool HandleServerScoreboardObjective(void);
 	bool HandleServerTeams(void);
 	bool HandleServerPlayerListItem(void);
+	bool HandleServerPluginMessage(void);
 	
 	bool HandleServerUnknownPacket(UInt32 a_PacketType, UInt32 a_PacketLen, UInt32 a_PacketReadSoFar);
 
@@ -189,6 +191,8 @@ protected:
 	bool ParseMetadata(cByteBuffer & a_Buffer, cByteBuffer & a_Packet);
 
 	void SendChatMessage(AString a_Message, AString a_Color);
+
+	void SwitchServer(AString a_ServerAddress, short a_ServerPort);
 
 	void StartEncryption(const Byte * a_Key);
 	AString m_AuthServerID;

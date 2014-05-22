@@ -41,8 +41,10 @@ public:
 	
 	cRsaPrivateKey & GetPrivateKey(void) { return m_PrivateKey; }
 	const AString & GetPublicKeyDER (void) { return m_PublicKeyDER; }
-	void AuthenticateUser(const AString & a_Name);
+	void AuthenticateUser(const AString & a_Name, const AString & a_UUID);
 	void KickUser(const AString & a_Name, const AString & a_Reason);
+
+	AString GenerateOfflineUUID(const AString & a_Username);
 
 	cSocketThreads m_SocketThreads;
 
