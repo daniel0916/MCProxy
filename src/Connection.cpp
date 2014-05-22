@@ -8,11 +8,17 @@
 #include "Server.h"
 #include "ServerConnection.h"
 #include "PolarSSL++/PublicKey.h"
+#include "PolarSSL++/Sha1Checksum.h"
 #include <iostream>
 
 #ifdef _WIN32
 	#include <direct.h>  // For _mkdir()
 #endif
+
+
+
+
+const int MAX_ENC_LEN = 512;  // Maximum size of the encrypted message; should be 128, but who knows...
 
 
 
@@ -36,9 +42,19 @@
 		} \
 	}
 
-#define CLIENTSEND(...) SendData(m_ClientSocket, __VA_ARGS__, "Client")
+#define CLIENTSEND(...) \
+	{ \
+		if (m_IsClientEncrypted) \
+		{ \
+			SendEncryptedData(m_ClientSocket, m_ClientEncryptor, __VA_ARGS__, "Client"); \
+		} \
+		else \
+		{ \
+			SendData(m_ClientSocket, __VA_ARGS__, "Client"); \
+		} \
+	}
 #define SERVERSEND(...) SendData(m_ServerSocket, __VA_ARGS__, "Server")
-#define CLIENTENCRYPTSEND(...) SendData(m_ClientSocket, __VA_ARGS__, "Client")  // The client conn is always unencrypted
+#define CLIENTENCRYPTSEND(...) SendEncryptedData(m_ClientSocket, m_ClientEncryptor, __VA_ARGS__, "Client")
 #define SERVERENCRYPTSEND(...) SendEncryptedData(m_ServerSocket, m_ServerEncryptor, __VA_ARGS__, "Server")
 
 #define COPY_TO_SERVER() \
@@ -68,28 +84,26 @@
 
 #define COPY_TO_CLIENT() \
 	{ \
-	AString ToClient; \
-	m_ServerBuffer.ReadAgain(ToClient); \
-	switch (m_ClientState) \
+		AString ToClient; \
+		m_ServerBuffer.ReadAgain(ToClient); \
+		switch (m_ClientState) \
 		{ \
-	case csUnencrypted: \
+			case csUnencrypted: \
 			{ \
-			CLIENTSEND(ToClient.data(), ToClient.size()); \
-			break; \
+				CLIENTSEND(ToClient.data(), ToClient.size()); \
+				break; \
 			} \
-	case csEncryptedUnderstood: \
-	case csEncryptedUnknown: \
+			case csEncryptedUnderstood: \
+			case csEncryptedUnknown: \
 			{ \
-			CLIENTENCRYPTSEND(ToClient.data(), ToClient.size()); \
-			break; \
+				CLIENTENCRYPTSEND(ToClient.data(), ToClient.size()); \
+				break; \
 			} \
-			/* case csWaitingForEncryption: \
+			case csWaitingForEncryption: \
 			{ \
-				Log("Waiting for client encryption, queued %u bytes", ToClient.size()); \
 				m_ClientEncryptionBuffer.append(ToClient.data(), ToClient.size()); \
 				break; \
 			} \
-			*/ \
 		} \
 	}
 
@@ -138,6 +152,7 @@ cConnection::cConnection(cSocket a_ClientSocket, cSocket a_ServerSocket, cServer
 	m_ServerProtocolState(-1),
 	m_ClientProtocolState(-1),
 	m_IsServerEncrypted(false),
+	m_IsClientEncrypted(false),
 	m_SwitchServer(false),
 	m_AlreadyCountPlayer(false),
 	m_AlreadyRemovedPlayer(false)
@@ -240,6 +255,7 @@ bool cConnection::DecodeClientsPackets(const char * a_Data, int a_Size)
 		PacketReadSoFar = m_ClientBuffer.GetReadableSpace();
 		VERIFY(m_ClientBuffer.ReadVarInt(PacketType));
 		PacketReadSoFar -= m_ClientBuffer.GetReadableSpace();
+
 		switch (m_ClientProtocolState)
 		{
 			case -1:
@@ -435,7 +451,7 @@ bool cConnection::HandleClientHandshake(void)
 	Packet.WriteVarInt(0);  // Packet type - initial handshake
 	Packet.WriteVarInt(ProtocolVersion);
 	Packet.WriteVarUTF8String(ServerHost);
-	Packet.WriteBEShort(m_Server.GetConnectPort());
+	Packet.WriteBEShort(m_Server.m_ListenPort);
 	Packet.WriteVarInt(NextState);
 	AString Pkt;
 	Packet.ReadAll(Pkt);
@@ -458,6 +474,60 @@ bool cConnection::HandleClientHandshake(void)
 
 bool cConnection::HandleClientLoginEncryptionKeyResponse(void)
 {
+	HANDLE_CLIENT_PACKET_READ(ReadBEShort, short, EncKeyLength);
+	AString EncKey;
+	if (!m_ClientBuffer.ReadString(EncKey, EncKeyLength))
+	{
+		return false;
+	}
+
+	HANDLE_CLIENT_PACKET_READ(ReadBEShort, short, EncNonceLength);
+	AString EncNonce;
+	if (!m_ClientBuffer.ReadString(EncNonce, EncNonceLength))
+	{
+		return false;
+	}
+
+	m_ClientBuffer.CommitRead();
+
+	if ((EncKeyLength > MAX_ENC_LEN) || (EncNonceLength > MAX_ENC_LEN))
+	{
+		LOGD("Too long encryption");
+		Kick("Hacked client");
+		return false;
+	}
+
+	// Decrypt EncNonce using privkey
+	cRsaPrivateKey & rsaDecryptor = m_Server.m_PrivateKey;
+	Int32 DecryptedNonce[MAX_ENC_LEN / sizeof(Int32)];
+	int res = rsaDecryptor.Decrypt((const Byte *)EncNonce.data(), EncNonce.size(), (Byte *)DecryptedNonce, sizeof(DecryptedNonce));
+	if (res != 4)
+	{
+		LOGD("Bad nonce length: got %d, exp %d", res, 4);
+		Kick("Hacked client");
+		return false;
+	}
+	if (ntohl(DecryptedNonce[0]) != (unsigned)(uintptr_t)this)
+	{
+		LOGD("Bad nonce value");
+		Kick("Hacked client");
+		return false;
+	}
+
+	// Decrypt the symmetric encryption key using privkey:
+	Byte DecryptedKey[MAX_ENC_LEN];
+	res = rsaDecryptor.Decrypt((const Byte *)EncKey.data(), EncKey.size(), DecryptedKey, sizeof(DecryptedKey));
+	if (res != 16)
+	{
+		LOGD("Bad key length");
+		Kick("Hacked client");
+		return false;
+	}
+
+	StartEncryption(DecryptedKey);
+
+	m_Server.m_Authenticator.Authenticate(m_UserName, m_AuthServerID);
+
 	return true;
 }
 
@@ -469,7 +539,32 @@ bool cConnection::HandleClientLoginStart(void)
 {
 	HANDLE_CLIENT_PACKET_READ(ReadVarUTF8String, AString, UserName);
 
+	m_UserName = UserName;
+
+	if (cServer::Get()->m_ShouldAuthenticate)
+	{
+		m_ClientBuffer.CommitRead();
+
+		// Send Encryption Request
+		cByteBuffer Packet(512);
+		Packet.WriteByte(0x01);
+		Packet.WriteVarUTF8String(cServer::Get()->m_ServerID);
+		AString PubKeyDer = cServer::Get()->m_PublicKeyDER;
+		Packet.WriteBEShort((short)PubKeyDer.size());
+		Packet.WriteBuf(PubKeyDer.data(), PubKeyDer.size());
+		Packet.WriteBEShort(4);
+		Packet.WriteBEInt((int)(intptr_t)this);
+		AString Pkt;
+		Packet.ReadAll(Pkt);
+		cByteBuffer ToClient(512);
+		ToClient.WriteVarUTF8String(Pkt);
+		CLIENTSEND(ToClient);
+
+		return true;
+	}
+
 	COPY_TO_SERVER();
+
 	return true;
 }
 
@@ -830,16 +925,15 @@ bool cConnection::HandleServerLoginSuccess(void)
 		return true;
 	}
 
-	m_UserName = Username;
-
 	m_ServerProtocolState = 3;
-	
-	if (m_IsServerEncrypted)
+
+	if (m_IsClientEncrypted)
 	{
-		m_ServerState = csEncryptedUnderstood;
-		SERVERENCRYPTSEND(m_ServerEncryptionBuffer.data(), m_ServerEncryptionBuffer.size());
-		m_ServerEncryptionBuffer.clear();
+		m_ClientState = csEncryptedUnderstood;
+		CLIENTENCRYPTSEND(m_ClientEncryptionBuffer.data(), m_ClientEncryptionBuffer.size());
+		m_ClientEncryptionBuffer.clear();
 	}
+
 	COPY_TO_CLIENT();
 	m_ClientProtocolState = 3;
 	return true;
@@ -1740,6 +1834,24 @@ void cConnection::SendEncryptionKeyResponse(const AString & a_ServerPublicKey, c
 
 
 
+void cConnection::Authenticate(AString a_Name)
+{
+	m_UserName = a_Name;
+
+	cByteBuffer LoginStartPacket(512);
+	LoginStartPacket.WriteByte(0x00);
+	LoginStartPacket.WriteVarUTF8String(m_UserName);
+	AString LoginStartPkt;
+	LoginStartPacket.ReadAll(LoginStartPkt);
+	cByteBuffer LoginStartToServer(512);
+	LoginStartToServer.WriteVarUTF8String(LoginStartPkt);
+	SERVERSEND(LoginStartToServer);
+}
+
+
+
+
+
 void cConnection::SendChatMessage(AString a_Message, AString a_Color)
 {
 	AString Message = "\xc2\xa7" + a_Color + a_Message;
@@ -1758,6 +1870,63 @@ void cConnection::SendChatMessage(AString a_Message, AString a_Color)
 
 
 
+void cConnection::Kick(AString a_Reason)
+{
+	switch (m_ClientProtocolState)
+	{
+		case 2:
+		{
+			cByteBuffer Packet(512);
+			Packet.WriteByte(0x00);
+			Packet.WriteVarUTF8String(Printf("{\"text\":\"%s\"}", EscapeString(a_Reason).c_str()));
+			AString Pkt;
+			Packet.ReadAll(Pkt);
+			cByteBuffer ToClient(512);
+			ToClient.WriteVarUTF8String(Pkt);
+			CLIENTSEND(ToClient);
+			break;
+		}
+		case 3:
+		{
+			cByteBuffer Packet(512);
+			Packet.WriteByte(0x40);
+			Packet.WriteVarUTF8String(Printf("{\"text\":\"%s\"}", EscapeString(a_Reason).c_str()));
+			AString Pkt;
+			Packet.ReadAll(Pkt);
+			cByteBuffer ToClient(512);
+			ToClient.WriteVarUTF8String(Pkt);
+			CLIENTSEND(ToClient);
+			break;
+		}
+	}
+	
+}
+
+
+
+
+
+void cConnection::StartEncryption(const Byte * a_Key)
+{
+	m_ClientEncryptor.Init(a_Key, a_Key);
+	m_ClientDecryptor.Init(a_Key, a_Key);
+	m_IsClientEncrypted = true;
+
+	// Prepare the m_AuthServerID:
+	cSha1Checksum Checksum;
+	AString ServerID = cServer::Get()->m_ServerID;
+	Checksum.Update((const Byte *)ServerID.c_str(), ServerID.length());
+	Checksum.Update(a_Key, 16);
+	Checksum.Update((const Byte *)cServer::Get()->m_PublicKeyDER.data(), cServer::Get()->m_PublicKeyDER.size());
+	Byte Digest[20];
+	Checksum.Finalize(Digest);
+	cSha1Checksum::DigestToJava(Digest, m_AuthServerID);
+}
+
+
+
+
+
 void cConnection::DataReceived(const char * a_Data, size_t a_Size)
 {
 	switch (m_ClientState)
@@ -1770,6 +1939,7 @@ void cConnection::DataReceived(const char * a_Data, size_t a_Size)
 		}
 		case csEncryptedUnderstood:
 		{
+			m_ClientDecryptor.ProcessData((Byte *)a_Data, (Byte *)a_Data, a_Size);
 			DecodeClientsPackets(a_Data, a_Size);
 			return;
 		}

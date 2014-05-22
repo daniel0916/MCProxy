@@ -5,6 +5,7 @@ project (MCProxy)
 
 include_directories (SYSTEM "${PROJECT_SOURCE_DIR}/../lib/")
 include_directories (SYSTEM "${PROJECT_SOURCE_DIR}/../lib/polarssl/include")
+include_directories (SYSTEM "${PROJECT_SOURCE_DIR}/../lib/jsoncpp/include")
 
 set(FOLDERS PolarSSL++)
 
@@ -56,4 +57,4 @@ if (NOT MSVC)
 	target_link_libraries(${EXECUTABLE} PolarSSL++)
 endif ()
 
-target_link_libraries(${EXECUTABLE} zlib polarssl iniFile)
+target_link_libraries(${EXECUTABLE} zlib polarssl iniFile jsoncpp)
