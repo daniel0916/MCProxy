@@ -93,7 +93,11 @@ protected:
 	cAesCfb128Decryptor m_ServerDecryptor;
 	cAesCfb128Encryptor m_ServerEncryptor;
 
+	cAesCfb128Decryptor m_ClientDecryptor;
+	cAesCfb128Encryptor m_ClientEncryptor;
+
 	AString m_ServerEncryptionBuffer;  // Buffer for the data to be sent to the server once encryption is established
+	AString m_ClientEncryptionBuffer;  // Buffer for the data to be sent to the client once encryption is established
 	
 	/*
 	The protocol states can be one of:
@@ -110,6 +114,9 @@ protected:
 	
 	/// True if the server connection has provided encryption keys
 	bool m_IsServerEncrypted;
+
+	/// True if the client connection has provided encryption keys
+	bool m_IsClientEncrypted;
 	
 	/// Sends data to the specified socket. If sending fails, prints a fail message using a_Peer and returns false.
 	bool SendData(cSocket a_Socket, const char * a_Data, size_t a_Size, const char * a_Peer);

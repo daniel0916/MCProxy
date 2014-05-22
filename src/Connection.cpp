@@ -42,9 +42,19 @@ const int MAX_ENC_LEN = 512;  // Maximum size of the encrypted message; should b
 		} \
 	}
 
-#define CLIENTSEND(...) SendData(m_ClientSocket, __VA_ARGS__, "Client")
+#define CLIENTSEND(...) \
+	{ \
+		if (m_IsClientEncrypted) \
+		{ \
+			SendEncryptedData(m_ClientSocket, m_ClientEncryptor, __VA_ARGS__, "Client"); \
+		} \
+		else \
+		{ \
+			SendData(m_ClientSocket, __VA_ARGS__, "Client"); \
+		} \
+	}
 #define SERVERSEND(...) SendData(m_ServerSocket, __VA_ARGS__, "Server")
-#define CLIENTENCRYPTSEND(...) SendData(m_ClientSocket, __VA_ARGS__, "Client")  // The client conn is always unencrypted
+#define CLIENTENCRYPTSEND(...) SendEncryptedData(m_ClientSocket, m_ClientEncryptor, __VA_ARGS__, "Client")
 #define SERVERENCRYPTSEND(...) SendEncryptedData(m_ServerSocket, m_ServerEncryptor, __VA_ARGS__, "Server")
 
 #define COPY_TO_SERVER() \
@@ -74,28 +84,26 @@ const int MAX_ENC_LEN = 512;  // Maximum size of the encrypted message; should b
 
 #define COPY_TO_CLIENT() \
 	{ \
-	AString ToClient; \
-	m_ServerBuffer.ReadAgain(ToClient); \
-	switch (m_ClientState) \
+		AString ToClient; \
+		m_ServerBuffer.ReadAgain(ToClient); \
+		switch (m_ClientState) \
 		{ \
-	case csUnencrypted: \
+			case csUnencrypted: \
 			{ \
-			CLIENTSEND(ToClient.data(), ToClient.size()); \
-			break; \
+				CLIENTSEND(ToClient.data(), ToClient.size()); \
+				break; \
 			} \
-	case csEncryptedUnderstood: \
-	case csEncryptedUnknown: \
+			case csEncryptedUnderstood: \
+			case csEncryptedUnknown: \
 			{ \
-			CLIENTENCRYPTSEND(ToClient.data(), ToClient.size()); \
-			break; \
+				CLIENTENCRYPTSEND(ToClient.data(), ToClient.size()); \
+				break; \
 			} \
-			/* case csWaitingForEncryption: \
+			case csWaitingForEncryption: \
 			{ \
-				Log("Waiting for client encryption, queued %u bytes", ToClient.size()); \
 				m_ClientEncryptionBuffer.append(ToClient.data(), ToClient.size()); \
 				break; \
 			} \
-			*/ \
 		} \
 	}
 
@@ -144,6 +152,7 @@ cConnection::cConnection(cSocket a_ClientSocket, cSocket a_ServerSocket, cServer
 	m_ServerProtocolState(-1),
 	m_ClientProtocolState(-1),
 	m_IsServerEncrypted(false),
+	m_IsClientEncrypted(false),
 	m_SwitchServer(false),
 	m_AlreadyCountPlayer(false),
 	m_AlreadyRemovedPlayer(false)
@@ -246,8 +255,6 @@ bool cConnection::DecodeClientsPackets(const char * a_Data, int a_Size)
 		PacketReadSoFar = m_ClientBuffer.GetReadableSpace();
 		VERIFY(m_ClientBuffer.ReadVarInt(PacketType));
 		PacketReadSoFar -= m_ClientBuffer.GetReadableSpace();
-
-		LOGWARN(Printf("0x%0x", PacketType).c_str());
 
 		switch (m_ClientProtocolState)
 		{
@@ -354,8 +361,6 @@ bool cConnection::DecodeServersPackets(const char * a_Data, int a_Size)
 		PacketReadSoFar = m_ServerBuffer.GetReadableSpace();
 		VERIFY(m_ServerBuffer.ReadVarInt(PacketType));
 		PacketReadSoFar -= m_ServerBuffer.GetReadableSpace();
-
-		LOGWARN(Printf("0x%0x", PacketType).c_str());
 
 		switch (m_ServerProtocolState)
 		{
@@ -469,8 +474,6 @@ bool cConnection::HandleClientHandshake(void)
 
 bool cConnection::HandleClientLoginEncryptionKeyResponse(void)
 {
-	LOGWARN("EncryptionKeyResponse");
-
 	HANDLE_CLIENT_PACKET_READ(ReadBEShort, short, EncKeyLength);
 	AString EncKey;
 	if (!m_ClientBuffer.ReadString(EncKey, EncKeyLength))
@@ -521,8 +524,6 @@ bool cConnection::HandleClientLoginEncryptionKeyResponse(void)
 		return false;
 	}
 
-	LOGWARN("EncryptionKeyResponse2");
-
 	StartEncryption(DecryptedKey);
 
 	m_Server.m_Authenticator.Authenticate(m_UserName, m_AuthServerID);
@@ -540,13 +541,9 @@ bool cConnection::HandleClientLoginStart(void)
 
 	m_UserName = UserName;
 
-	//COPY_TO_SERVER();
-
 	if (cServer::Get()->m_ShouldAuthenticate)
 	{
 		m_ClientBuffer.CommitRead();
-
-		LOGWARN("Login Start");
 
 		// Send Encryption Request
 		cByteBuffer Packet(512);
@@ -927,22 +924,13 @@ bool cConnection::HandleServerLoginSuccess(void)
 	}
 
 	m_ServerProtocolState = 3;
-	
-	if (m_IsServerEncrypted)
+
+	if (m_IsClientEncrypted)
 	{
-		m_ServerState = csEncryptedUnderstood;
-		SERVERENCRYPTSEND(m_ServerEncryptionBuffer.data(), m_ServerEncryptionBuffer.size());
-		m_ServerEncryptionBuffer.clear();
+		m_ClientState = csEncryptedUnderstood;
+		CLIENTENCRYPTSEND(m_ClientEncryptionBuffer.data(), m_ClientEncryptionBuffer.size());
+		m_ClientEncryptionBuffer.clear();
 	}
-
-	/**if (cServer::Get()->m_ShouldAuthenticate)
-	{
-		m_ServerBuffer.CommitRead();
-
-		return true;
-	}*/
-
-	LOGWARN("Login Success");
 
 	COPY_TO_CLIENT();
 	m_ClientProtocolState = 3;
@@ -1848,8 +1836,6 @@ void cConnection::Authenticate(AString a_Name)
 {
 	m_UserName = a_Name;
 
-	LOGWARN("Auth");
-
 	cByteBuffer LoginStartPacket(512);
 	LoginStartPacket.WriteByte(0x00);
 	LoginStartPacket.WriteVarUTF8String(m_UserName);
@@ -1858,19 +1844,6 @@ void cConnection::Authenticate(AString a_Name)
 	cByteBuffer LoginStartToServer(512);
 	LoginStartToServer.WriteVarUTF8String(LoginStartPkt);
 	SERVERSEND(LoginStartToServer);
-
-	/**cByteBuffer LoginSuccessPacket(512);
-	LoginSuccessPacket.WriteByte(0x02);
-	LoginSuccessPacket.WriteVarUTF8String("1d2d3464-40b1-498e-a8fb-0758774bce03");
-	LoginSuccessPacket.WriteVarUTF8String(m_UserName);
-	AString LoginSuccessPkt;
-	LoginSuccessPacket.ReadAll(LoginSuccessPkt);
-	cByteBuffer LoginSuccessToServer(512);
-	LoginSuccessToServer.WriteVarUTF8String(LoginSuccessPkt);
-	CLIENTSEND(LoginSuccessToServer);*/
-
-	//m_ServerProtocolState = 3;
-	//m_ClientProtocolState = 3;
 }
 
 
@@ -1933,9 +1906,9 @@ void cConnection::Kick(AString a_Reason)
 
 void cConnection::StartEncryption(const Byte * a_Key)
 {
-	m_ServerEncryptor.Init(a_Key, a_Key);
-	m_ServerDecryptor.Init(a_Key, a_Key);
-	m_IsServerEncrypted = true;
+	m_ClientEncryptor.Init(a_Key, a_Key);
+	m_ClientDecryptor.Init(a_Key, a_Key);
+	m_IsClientEncrypted = true;
 
 	// Prepare the m_AuthServerID:
 	cSha1Checksum Checksum;
@@ -1964,6 +1937,7 @@ void cConnection::DataReceived(const char * a_Data, size_t a_Size)
 		}
 		case csEncryptedUnderstood:
 		{
+			m_ClientDecryptor.ProcessData((Byte *)a_Data, (Byte *)a_Data, a_Size);
 			DecodeClientsPackets(a_Data, a_Size);
 			return;
 		}
