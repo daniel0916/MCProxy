@@ -193,6 +193,8 @@ protected:
 	void StartEncryption(const Byte * a_Key);
 	AString m_AuthServerID;
 
+	AString m_NewServerName;
+
 	// cSocketThreads::cCallback overrides:
 	virtual void DataReceived(const char * a_Data, size_t a_Size) override;  // Data is received from the client
 	virtual void GetOutgoingData(AString & a_Data) override;  // Data can be sent to client

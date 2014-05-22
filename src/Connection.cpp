@@ -616,6 +616,7 @@ bool cConnection::HandleClientChatMessage(void)
 		{
 			return true;
 		}
+		m_NewServerName = ChatMessage[1];
 		AString ServerConfig = m_Server.m_Config.GetValue("Servers", ChatMessage[1]);
 		if (ServerConfig.empty())
 		{
@@ -914,6 +915,9 @@ bool cConnection::HandleServerLoginSuccess(void)
 	{
 		m_ServerBuffer.CommitRead();
 		m_ServerProtocolState = 3;
+
+		LOGINFO("%s switched to %s", m_UserName.c_str(), m_NewServerName.c_str());
+
 		return true;
 	}
 
@@ -929,7 +933,7 @@ bool cConnection::HandleServerLoginSuccess(void)
 	COPY_TO_CLIENT();
 	m_ClientProtocolState = 3;
 
-	LOGINFO(Printf("%s connected to %s", m_UserName, cServer::Get()->m_MainServerName).c_str());
+	LOGINFO("%s connected to %s", m_UserName.c_str(), cServer::Get()->m_MainServerName.c_str());
 
 	return true;
 }
