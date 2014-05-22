@@ -210,6 +210,13 @@ void cServer::Start(void)
 		{
 			m_bStop = true;
 		}
+
+		if (!m_bStop)
+		{
+			continue;
+		}
+
+		m_Authenticator.Stop();
 	}
 }
 
