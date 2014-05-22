@@ -69,6 +69,7 @@ cServer::cServer(void) :
 	m_bStop(false),
 	m_MainServerAddress("localhost"),
 	m_MainServerPort(25565),
+	m_MainServerName("Lobby"),
 	m_MOTD("MCProxy - A Minecraft Proxy Server"),
 	m_MaxPlayers(100),
 	m_PlayerAmount(0),
@@ -146,8 +147,8 @@ int cServer::Init(void)
 		return 1;
 	}
 
-	AString ServerName = m_Config.GetValue("Proxy", "MainServer");
-	AString ServerConfig = m_Config.GetValue("Servers", ServerName);
+	m_MainServerName = m_Config.GetValue("Proxy", "MainServer");
+	AString ServerConfig = m_Config.GetValue("Servers", m_MainServerName);
 	if (ServerConfig.empty())
 	{
 		LOGWARN("Can't load MainServer from config");

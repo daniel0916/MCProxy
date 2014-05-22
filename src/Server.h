@@ -49,6 +49,7 @@ public:
 	cIniFile m_Config;
 	AString m_MainServerAddress;
 	int m_MainServerPort;
+	AString m_MainServerName;
 	int m_ListenPort;
 	AString m_MOTD;
 	int m_MaxPlayers;

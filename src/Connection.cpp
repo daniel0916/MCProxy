@@ -526,7 +526,7 @@ bool cConnection::HandleClientLoginEncryptionKeyResponse(void)
 
 	StartEncryption(DecryptedKey);
 
-	m_Server.m_Authenticator.Authenticate(m_UserName, m_AuthServerID);
+	cServer::Get()->m_Authenticator.Authenticate(m_UserName, m_AuthServerID);
 
 	return true;
 }
@@ -928,6 +928,9 @@ bool cConnection::HandleServerLoginSuccess(void)
 
 	COPY_TO_CLIENT();
 	m_ClientProtocolState = 3;
+
+	LOGINFO(Printf("%s connected to %s", m_UserName, cServer::Get()->m_MainServerName).c_str());
+
 	return true;
 }
 
