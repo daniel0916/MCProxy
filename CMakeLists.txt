@@ -9,6 +9,7 @@ set_lib_flags()
 add_subdirectory(lib/zlib/)
 add_subdirectory(lib/inifile/)
 add_subdirectory(lib/jsoncpp/)
+add_subdirectory(lib/md5/)
 
 include(lib/polarssl.cmake)
 
