@@ -187,9 +187,6 @@ protected:
 	
 	/// Parses the metadata in a_Buffer and write it to a_Packet; returns true if successful, false if not enough data
 	bool ParseMetadata(cByteBuffer & a_Buffer, cByteBuffer & a_Packet);
-	
-	/// Send EKResp to the server:
-	void SendEncryptionKeyResponse(const AString & a_ServerPublicKey, const AString & a_Nonce);
 
 	void SendChatMessage(AString a_Message, AString a_Color);
 

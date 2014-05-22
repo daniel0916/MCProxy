@@ -564,7 +564,6 @@ bool cConnection::HandleClientLoginStart(void)
 	}
 
 	COPY_TO_SERVER();
-
 	return true;
 }
 
@@ -594,12 +593,11 @@ bool cConnection::HandleClientAnimation(void)
 		cByteBuffer ToServer(512);
 		ToServer.WriteVarUTF8String(Pkt);
 		SERVERSEND(ToServer);
-	}
-	else
-	{
-		COPY_TO_SERVER();
+
+		return true;
 	}
 
+	COPY_TO_SERVER();
 	return true;
 }
 
@@ -732,12 +730,11 @@ bool cConnection::HandleClientChatMessage(void)
 		SERVERSEND(LoginStartToServer);
 
 		m_ServerProtocolState = 2;
+
+		return true;
 	}
-	else
-	{
-		COPY_TO_SERVER();
-	}
-	
+
+	COPY_TO_SERVER();
 	return true;
 }
 
@@ -766,12 +763,11 @@ bool cConnection::HandleClientEntityAction(void)
 		cByteBuffer ToServer(512);
 		ToServer.WriteVarUTF8String(Pkt);
 		SERVERSEND(ToServer);
-	}
-	else
-	{
-		COPY_TO_SERVER();
+
+		return true;
 	}
 
+	COPY_TO_SERVER();
 	return true;
 }
 
@@ -786,12 +782,10 @@ bool cConnection::HandleClientPlayerOnGround(void)
 	if (m_SwitchServer)
 	{
 		m_ClientBuffer.CommitRead();
+		return true;
 	}
-	else
-	{
-		COPY_TO_SERVER();
-	}
-	
+
+	COPY_TO_SERVER();
 	return true;
 }
 
@@ -901,11 +895,9 @@ bool cConnection::HandleServerLoginEncryptionKeyRequest(void)
 	{
 		return false;
 	}
-	
-	// Reply to the server:
-	SendEncryptionKeyResponse(PublicKey, Nonce);
-	
-	// Do not send to client - we want the client connection open
+
+	// The proxy don't support authentication from the server. So don't send it to the client.
+
 	return true;
 }
 
@@ -967,12 +959,11 @@ bool cConnection::HandleServerAttachEntity(void)
 		cByteBuffer ToClient(512);
 		ToClient.WriteVarUTF8String(Pkt);
 		CLIENTSEND(ToClient);
-	}
-	else
-	{
-		COPY_TO_CLIENT();
+
+		return true;
 	}
 
+	COPY_TO_CLIENT();
 	return true;
 }
 
@@ -999,12 +990,11 @@ bool cConnection::HandleServerCollectPickup(void)
 		cByteBuffer ToClient(512);
 		ToClient.WriteVarUTF8String(Pkt);
 		CLIENTSEND(ToClient);
-	}
-	else
-	{
-		COPY_TO_CLIENT();
+
+		return true;
 	}
 
+	COPY_TO_CLIENT();
 	return true;
 }
 
@@ -1029,12 +1019,11 @@ bool cConnection::HandleServerEntity(void)
 		cByteBuffer ToClient(512);
 		ToClient.WriteVarUTF8String(Pkt);
 		CLIENTSEND(ToClient);
-	}
-	else
-	{
-		COPY_TO_CLIENT();
+
+		return true;
 	}
 
+	COPY_TO_CLIENT();
 	return true;
 }
 
@@ -1061,12 +1050,11 @@ bool cConnection::HandleServerEntityHeadLook(void)
 		cByteBuffer ToClient(512);
 		ToClient.WriteVarUTF8String(Pkt);
 		CLIENTSEND(ToClient);
-	}
-	else
-	{
-		COPY_TO_CLIENT();
+
+		return true;
 	}
 
+	COPY_TO_CLIENT();
 	return true;
 }
 
@@ -1095,12 +1083,11 @@ bool cConnection::HandleServerEntityLook(void)
 		cByteBuffer ToClient(512);
 		ToClient.WriteVarUTF8String(Pkt);
 		CLIENTSEND(ToClient);
-	}
-	else
-	{
-		COPY_TO_CLIENT();
+
+		return true;
 	}
 
+	COPY_TO_CLIENT();
 	return true;
 }
 
@@ -1131,18 +1118,17 @@ bool cConnection::HandleServerEntityMetadata(void)
 		cByteBuffer ToClient(512);
 		ToClient.WriteVarUTF8String(Pkt);
 		CLIENTSEND(ToClient);
+
+		return true;
 	}
-	else
+
+	AString Metadata;
+	if (!ParseMetadata(m_ServerBuffer, Packet))
 	{
-		AString Metadata;
-		if (!ParseMetadata(m_ServerBuffer, Packet))
-		{
-			return false;
-		}
-
-		COPY_TO_CLIENT();
+		return false;
 	}
 
+	COPY_TO_CLIENT();
 	return true;
 }
 
@@ -1196,27 +1182,23 @@ bool cConnection::HandleServerEntityProperties(void)
 
 		return true;
 	}
-	else
+
+	for (int i = 0; i < Count; i++)
 	{
-		for (int i = 0; i < Count; i++)
+		HANDLE_SERVER_PACKET_READ(ReadVarUTF8String, AString, Key);
+		HANDLE_SERVER_PACKET_READ(ReadBEDouble, double, Value);
+		HANDLE_SERVER_PACKET_READ(ReadBEShort, short, ListLength);
+
+		for (short j = 0; j < ListLength; j++)
 		{
-			HANDLE_SERVER_PACKET_READ(ReadVarUTF8String, AString, Key);
-			HANDLE_SERVER_PACKET_READ(ReadBEDouble, double, Value);
-			HANDLE_SERVER_PACKET_READ(ReadBEShort, short, ListLength);
+			HANDLE_SERVER_PACKET_READ(ReadBEInt64, Int64, UUIDHi);
+			HANDLE_SERVER_PACKET_READ(ReadBEInt64, Int64, UUIDLo);
+			HANDLE_SERVER_PACKET_READ(ReadBEDouble, double, DblVal);
+			HANDLE_SERVER_PACKET_READ(ReadByte, Byte, ByteVal);
+		}
+	}  // for i
 
-			for (short j = 0; j < ListLength; j++)
-			{
-				HANDLE_SERVER_PACKET_READ(ReadBEInt64, Int64, UUIDHi);
-				HANDLE_SERVER_PACKET_READ(ReadBEInt64, Int64, UUIDLo);
-				HANDLE_SERVER_PACKET_READ(ReadBEDouble, double, DblVal);
-				HANDLE_SERVER_PACKET_READ(ReadByte, Byte, ByteVal);
-			}
-		}  // for i
-
-		COPY_TO_CLIENT();
-		return true;
-	}
-
+	COPY_TO_CLIENT();
 	return true;
 }
 
@@ -1247,12 +1229,11 @@ bool cConnection::HandleServerEntityRelativeMove(void)
 		cByteBuffer ToClient(512);
 		ToClient.WriteVarUTF8String(Pkt);
 		CLIENTSEND(ToClient);
-	}
-	else
-	{
-		COPY_TO_CLIENT();
+
+		return true;
 	}
 
+	COPY_TO_CLIENT();
 	return true;
 }
 
@@ -1287,12 +1268,11 @@ bool cConnection::HandleServerEntityRelativeMoveLook(void)
 		cByteBuffer ToClient(512);
 		ToClient.WriteVarUTF8String(Pkt);
 		CLIENTSEND(ToClient);
-	}
-	else
-	{
-		COPY_TO_CLIENT();
+
+		return true;
 	}
 
+	COPY_TO_CLIENT();
 	return true;
 }
 
@@ -1319,12 +1299,11 @@ bool cConnection::HandleServerEntityStatus(void)
 		cByteBuffer ToClient(512);
 		ToClient.WriteVarUTF8String(Pkt);
 		CLIENTSEND(ToClient);
-	}
-	else
-	{
-		COPY_TO_CLIENT();
+
+		return true;
 	}
 
+	COPY_TO_CLIENT();
 	return true;
 }
 
@@ -1359,12 +1338,11 @@ bool cConnection::HandleServerEntityTeleport(void)
 		cByteBuffer ToClient(512);
 		ToClient.WriteVarUTF8String(Pkt);
 		CLIENTSEND(ToClient);
-	}
-	else
-	{
-		COPY_TO_CLIENT();
+
+		return true;
 	}
 
+	COPY_TO_CLIENT();
 	return true;
 }
 
@@ -1395,12 +1373,11 @@ bool cConnection::HandleServerEntityVelocity(void)
 		cByteBuffer ToClient(512);
 		ToClient.WriteVarUTF8String(Pkt);
 		CLIENTSEND(ToClient);
-	}
-	else
-	{
-		COPY_TO_CLIENT();
+
+		return true;
 	}
 
+	COPY_TO_CLIENT();
 	return true;
 }
 
@@ -1417,15 +1394,7 @@ bool cConnection::HandleServerJoinGame(void)
 	HANDLE_SERVER_PACKET_READ(ReadChar,          char,    MaxPlayers);
 	HANDLE_SERVER_PACKET_READ(ReadVarUTF8String, AString, LevelType);
 
-	if (!m_SwitchServer)
-	{
-		m_ClientEntityID = EntityID;
-		m_ServerEntityID = EntityID;
-
-		m_Server.m_PlayerAmount += 1;
-		m_AlreadyCountPlayer = true;
-	}
-	else
+	if (m_SwitchServer)
 	{
 		m_ServerBuffer.CommitRead();
 
@@ -1461,6 +1430,12 @@ bool cConnection::HandleServerJoinGame(void)
 		return true;
 	}
 
+	m_ClientEntityID = EntityID;
+	m_ServerEntityID = EntityID;
+
+	m_Server.m_PlayerAmount += 1;
+	m_AlreadyCountPlayer = true;
+
 	COPY_TO_CLIENT();
 	return true;
 }
@@ -1488,12 +1463,11 @@ bool cConnection::HandleServerPlayerAnimation(void)
 		cByteBuffer ToClient(512);
 		ToClient.WriteVarUTF8String(Pkt);
 		CLIENTSEND(ToClient);
-	}
-	else
-	{
-		COPY_TO_CLIENT();
+
+		return true;
 	}
 
+	COPY_TO_CLIENT();
 	return true;
 }
 
@@ -1524,12 +1498,11 @@ bool cConnection::HandleServerUseBed(void)
 		cByteBuffer ToClient(512);
 		ToClient.WriteVarUTF8String(Pkt);
 		CLIENTSEND(ToClient);
-	}
-	else
-	{
-		COPY_TO_CLIENT();
+
+		return true;
 	}
 
+	COPY_TO_CLIENT();
 	return true;
 }
 
@@ -1745,7 +1718,6 @@ bool cConnection::ParseMetadata(cByteBuffer & a_Buffer, cByteBuffer & a_Packet)
 				LenBuf.WriteVarInt(Len);
 				AString VarLen;
 				LenBuf.ReadAll(VarLen);
-				//a_Metadata.append(VarLen);
 				Length = Len;
 				break;
 			}
@@ -1785,49 +1757,6 @@ bool cConnection::ParseMetadata(cByteBuffer & a_Buffer, cByteBuffer & a_Packet)
 
 	}  // while (x != 0x7f)
 	return true;
-}
-
-
-
-
-
-void cConnection::SendEncryptionKeyResponse(const AString & a_ServerPublicKey, const AString & a_Nonce)
-{
-	// Generate the shared secret and encrypt using the server's public key
-	Byte SharedSecret[16];
-	Byte EncryptedSecret[128];
-	memset(SharedSecret, 0, sizeof(SharedSecret));  // Use all zeroes for the initial secret
-	cPublicKey PubKey(a_ServerPublicKey);
-	int res = PubKey.Encrypt(SharedSecret, sizeof(SharedSecret), EncryptedSecret, sizeof(EncryptedSecret));
-	if (res < 0)
-	{
-		return;
-	}
-
-	m_ServerEncryptor.Init(SharedSecret, SharedSecret);
-	m_ServerDecryptor.Init(SharedSecret, SharedSecret);
-	
-	// Encrypt the nonce:
-	Byte EncryptedNonce[128];
-	res = PubKey.Encrypt((const Byte *)a_Nonce.data(), a_Nonce.size(), EncryptedNonce, sizeof(EncryptedNonce));
-	if (res < 0)
-	{
-		return;
-	}
-	
-	// Send the packet to the server:
-	cByteBuffer ToServer(1024);
-	ToServer.WriteByte(0x01);  // To server: Encryption key response
-	ToServer.WriteBEShort((short)sizeof(EncryptedSecret));
-	ToServer.WriteBuf(EncryptedSecret, sizeof(EncryptedSecret));
-	ToServer.WriteBEShort((short)sizeof(EncryptedNonce));
-	ToServer.WriteBuf(EncryptedNonce, sizeof(EncryptedNonce));
-	cByteBuffer Len(5);
-	Len.WriteVarInt(ToServer.GetReadableSpace());
-	SERVERSEND(Len);
-	SERVERSEND(ToServer);
-	m_ServerState = csEncryptedUnderstood;
-	m_IsServerEncrypted = true;
 }
 
 
@@ -1899,7 +1828,6 @@ void cConnection::Kick(AString a_Reason)
 			break;
 		}
 	}
-	
 }
 
 
@@ -1945,7 +1873,7 @@ void cConnection::DataReceived(const char * a_Data, size_t a_Size)
 		}
 		case csEncryptedUnknown:
 		{
-			m_ServerEncryptor.ProcessData((Byte *)a_Data, (Byte *)a_Data, a_Size);
+			m_ClientDecryptor.ProcessData((Byte *)a_Data, (Byte *)a_Data, a_Size);
 			SERVERSEND(a_Data, a_Size);
 			return;
 		}
@@ -1994,11 +1922,12 @@ bool cConnection::SendToClient(const char * a_Data, size_t a_Size)
 			m_ServerDecryptor.ProcessData((Byte *)a_Data, (Byte *)a_Data, a_Size);
 			return DecodeServersPackets(a_Data, a_Size);
 		}
-		/**case csEncryptedUnknown:
+		case csEncryptedUnknown:
 		{
 			m_ServerDecryptor.ProcessData((Byte *)a_Data, (Byte *)a_Data, a_Size);
-			return CLIENTSEND(a_Data, a_Size);
-		}*/
+			CLIENTSEND(a_Data, a_Size);
+			return true;
+		}
 	}
 	return false;
 }
