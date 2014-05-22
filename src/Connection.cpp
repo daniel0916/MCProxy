@@ -563,6 +563,8 @@ bool cConnection::HandleClientLoginStart(void)
 		return true;
 	}
 
+	COPY_TO_SERVER();
+
 	return true;
 }
 
