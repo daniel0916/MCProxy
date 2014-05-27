@@ -14,3 +14,13 @@ MCProxy/
 *.sdf
 *.sln
 *.idb
+/nbproject/private/configurations.xml
+/src/Makefile
+/nbproject/private/launcher.properties
+/compile_commands.json
+/src/PolarSSL++/Makefile
+/Makefile
+/nbproject/private/Default.properties
+/nbproject/configurations.xml
+/nbproject/private/private.xml
+/nbproject/project.xml
