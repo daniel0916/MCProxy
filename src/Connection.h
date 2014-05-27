@@ -15,6 +15,7 @@
 #include "PolarSSL++/AesCfb128Decryptor.h"
 #include "PolarSSL++/AesCfb128Encryptor.h"
 #include "Protocol17x.h"
+#include "Protocol18x.h"
 
 
 

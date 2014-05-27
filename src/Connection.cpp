@@ -331,21 +331,6 @@ bool cConnection::HandleClientHandshake(void)
 	HANDLE_CLIENT_PACKET_READ(ReadVarInt,        UInt32,  NextState);
 	m_ClientBuffer.CommitRead();
 
-	// Send the same packet to the server, but with our port:
-	cByteBuffer Packet(512);
-	Packet.WriteVarInt(0);  // Packet type - initial handshake
-	Packet.WriteVarInt(5);
-	Packet.WriteVarUTF8String(ServerHost);
-	Packet.WriteBEShort(m_Server.m_ListenPort);
-	Packet.WriteVarInt(NextState);
-	AString Pkt;
-	Packet.ReadAll(Pkt);
-	cByteBuffer ToServer(512);
-	ToServer.WriteVarUTF8String(Pkt);
-	SERVERSEND(ToServer);
-
-	m_SendedHandshake = true;
-
 	if (ProtocolVersion == 4)
 	{
 		m_Protocol = new cProtocol172(this);
@@ -354,6 +339,39 @@ bool cConnection::HandleClientHandshake(void)
 	{
 		m_Protocol = new cProtocol176(this);
 	}
+	else if (ProtocolVersion == 19)
+	{
+		m_Protocol = new cProtocol180(this);
+	}
+	else
+	{
+		// Kick the client and don't send the handshake to the server
+		cByteBuffer Packet(512);
+		Packet.WriteByte(0x00);
+		Packet.WriteVarUTF8String(Printf("{\"text\":\"Unsupported Protocol Version!\"}"));
+		AString Pkt;
+		Packet.ReadAll(Pkt);
+		cByteBuffer ToClient(512);
+		ToClient.WriteVarUTF8String(Pkt);
+		CLIENTSEND(ToClient);
+
+		return true;
+	}
+
+	// Send the same packet to the server, but with our port:
+	cByteBuffer Packet(512);
+	Packet.WriteVarInt(0);  // Packet type - initial handshake
+	Packet.WriteVarInt(5);
+	Packet.WriteVarUTF8String(ServerHost);
+	Packet.WriteBEShort(cServer::Get()->m_ListenPort);
+	Packet.WriteVarInt(NextState);
+	AString Pkt;
+	Packet.ReadAll(Pkt);
+	cByteBuffer ToServer(512);
+	ToServer.WriteVarUTF8String(Pkt);
+	SERVERSEND(ToServer);
+
+	m_SendedHandshake = true;
 	
 	m_Protocol->m_ClientProtocolState = (int)NextState;
 	m_Protocol->m_ServerProtocolState = (int)NextState;
@@ -546,6 +564,7 @@ void cConnection::Kick(AString a_Reason)
 			CLIENTSEND(ToClient);
 			break;
 		}
+		default: break;
 	}
 }
 

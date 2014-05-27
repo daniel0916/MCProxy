@@ -1540,47 +1540,48 @@ bool cProtocol172::ParseMetadata(cByteBuffer & a_Buffer, cByteBuffer & a_Packet)
 		int Length = 0;
 		switch (Type)
 		{
-		case 0: Length = 1; break;  // Byte
-		case 1: Length = 2; break;  // short
-		case 2: Length = 4; break;  // int
-		case 3: Length = 4; break;  // float
-		case 4:  // UTF-8 string with VarInt length
-		{
-					 UInt32 Len;
-					 int rs = a_Buffer.GetReadableSpace();
-					 if (!a_Buffer.ReadVarInt(Len))
-					 {
-						 return false;
-					 }
-					 rs = rs - a_Buffer.GetReadableSpace();
-					 cByteBuffer LenBuf(8);
-					 LenBuf.WriteVarInt(Len);
-					 AString VarLen;
-					 LenBuf.ReadAll(VarLen);
-					 Length = Len;
-					 break;
-		}
-		case 5:
-		{
-				  int Before = a_Buffer.GetReadableSpace();
-				  if (!ParseSlot(a_Buffer, a_Packet))
-				  {
-					  return false;
-				  }
-				  int After = a_Buffer.GetReadableSpace();
-				  a_Buffer.ResetRead();
-				  a_Buffer.SkipRead(a_Buffer.GetReadableSpace() - Before);
-				  Length = Before - After;
-				  break;
-		}
-		case 6: Length = 12; break;  // 3 * int
-		case 7: Length = 9; break;
-		default:
-		{
-				   ASSERT(!"Unknown metadata type");
-				   break;
-		}
+			case 0: Length = 1; break;  // Byte
+			case 1: Length = 2; break;  // short
+			case 2: Length = 4; break;  // int
+			case 3: Length = 4; break;  // float
+			case 4:  // UTF-8 string with VarInt length
+			{
+				UInt32 Len;
+				int rs = a_Buffer.GetReadableSpace();
+				if (!a_Buffer.ReadVarInt(Len))
+				{
+					return false;
+				}
+				rs = rs - a_Buffer.GetReadableSpace();
+				cByteBuffer LenBuf(8);
+				LenBuf.WriteVarInt(Len);
+				AString VarLen;
+				LenBuf.ReadAll(VarLen);
+				Length = Len;
+				break;
+			}
+			case 5:
+			{
+				int Before = a_Buffer.GetReadableSpace();
+				if (!ParseSlot(a_Buffer, a_Packet))
+				{
+					return false;
+				}
+				int After = a_Buffer.GetReadableSpace();
+				a_Buffer.ResetRead();
+				a_Buffer.SkipRead(a_Buffer.GetReadableSpace() - Before);
+				Length = Before - After;
+				break;
+			}
+			case 6: Length = 12; break;  // 3 * int
+			case 7: Length = 9; break;
+			default:
+			{
+				ASSERT(!"Unknown metadata type");
+				break;
+			}
 		}  // switch (Type)
+
 		AString data;
 		if (!a_Buffer.ReadString(data, Length))
 		{

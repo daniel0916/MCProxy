@@ -897,3 +897,16 @@ void cByteBuffer::CheckValid(void) const
 
 
 
+bool cByteBuffer::WritePosition(int a_PosX, int a_PosY, int a_PosZ)
+{
+	UInt64 encoded_x = a_PosX & 0x3FFFFFF;
+	UInt64 encoded_y = a_PosY & 0xFFF;
+	UInt64 encoded_z = a_PosZ & 0x3FFFFFF;
+	UInt64 value = (encoded_x << 38) | (encoded_y << 26) | encoded_z;
+	return WriteBEInt64(value);
+}
+
+
+
+
+

@@ -124,6 +124,9 @@ public:
 	/// Checks if the internal state is valid (read and write positions in the correct bounds) using ASSERTs
 	void CheckValid(void) const;
 
+	/// Write the Position with the Coords (for Minecraft 1.8 or older) 
+	bool WritePosition(int a_PosX, int a_PosY, int a_PosZ);
+
 protected:
 	char * m_Buffer;
 	size_t m_BufferSize;  // Total size of the ringbuffer
