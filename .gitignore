@@ -14,3 +14,8 @@ MCProxy/
 *.sdf
 *.sln
 *.idb
+src/Makefile
+nbproject/
+compile_commands.json
+src/PolarSSL++/Makefile
+Makefile

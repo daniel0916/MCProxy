@@ -36,8 +36,8 @@ documentation and/or software.
 /* system implementation headers */
 #include <stdio.h>
 
-#ifndef _WIN32
-	#include <cstring>
+#ifndef _MSC_VER
+    #include <cstring>
 #endif
 
 

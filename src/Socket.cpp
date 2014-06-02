@@ -257,14 +257,14 @@ cSocket cSocket::AcceptIPv6(void)
 			#else  // _MSC_VER
 				// MinGW
 				Printf(SClient.m_IPString, "%x:%x:%x:%x:%x:%x:%x:%x", 
-					from.sin6_addr.s6_addr16[0],
-					from.sin6_addr.s6_addr16[1],
-					from.sin6_addr.s6_addr16[2],
-					from.sin6_addr.s6_addr16[3],
-					from.sin6_addr.s6_addr16[4],
-					from.sin6_addr.s6_addr16[5],
-					from.sin6_addr.s6_addr16[6],
-					from.sin6_addr.s6_addr16[7]
+					from.sin6_addr.s6_addr[0],
+					from.sin6_addr.s6_addr[1],
+					from.sin6_addr.s6_addr[2],
+					from.sin6_addr.s6_addr[3],
+					from.sin6_addr.s6_addr[4],
+					from.sin6_addr.s6_addr[5],
+					from.sin6_addr.s6_addr[6],
+					from.sin6_addr.s6_addr[7]
 				);
 			#endif  // else _MSC_VER
 		#else

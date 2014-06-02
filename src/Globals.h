@@ -43,6 +43,8 @@
 	#define stricmp strcasecmp
 	
 	#define FORMATSTRING(formatIndex, va_argsIndex)
+	
+	#define SIZE_T_FMT "%zd"
 
 #else
 

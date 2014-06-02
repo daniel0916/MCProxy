@@ -74,7 +74,7 @@ bool cFile::Open(const AString & iFileName, eMode iMode)
 		return false;
 	}
 
-#ifdef _WIN32
+#ifdef _MSC_VER
 	fopen_s(&m_File, (FILE_IO_PREFIX + iFileName).c_str(), Mode);
 #else
 	m_File = fopen((FILE_IO_PREFIX + iFileName).c_str(), Mode);
@@ -87,7 +87,7 @@ bool cFile::Open(const AString & iFileName, eMode iMode)
 		// So now we know either the file doesn't exist or we don't have rights, no need to worry about file contents.
 		// Simply re-open for read-writing, erasing existing contents:
 
-#ifdef _WIN32
+#ifdef _MSC_VER
 		fopen_s(&m_File, (FILE_IO_PREFIX + iFileName).c_str(), "wb+");
 #else
 		m_File = fopen((FILE_IO_PREFIX + iFileName).c_str(), "wb+");
