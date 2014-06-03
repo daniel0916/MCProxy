@@ -5,6 +5,7 @@
 
 #include "Globals.h"
 #include "Protocol17x.cpp"
+#include "Protocol18x.cpp"
 #include "Connection.h"
 #include "Server.h"
 #include "ServerConnection.h"
@@ -338,11 +339,11 @@ bool cConnection::HandleClientHandshake(void)
 	}
 	else if (ProtocolVersion == 5)
 	{
-		//m_Protocol = new cProtocol176(this);
+		m_Protocol = new cProtocol176(this);
 	}
 	else if (ProtocolVersion == 19)
 	{
-		//m_Protocol = new cProtocol180(this);
+		m_Protocol = new cProtocol180(this);
 	}
 	else
 	{
