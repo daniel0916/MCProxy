@@ -242,18 +242,6 @@ typedef unsigned char Byte;
 
 
 
-/// A generic interface used mainly in ForEach() functions
-template <typename Type> class cItemCallback
-{
-public:
-	/// Called for each item in the internal list; return true to stop the loop, or false to continue enumerating
-	virtual bool Item(Type * a_Type) = 0;
-} ;
-
-
-
-
-
 #define LOGWARN    LOGWARNING
 
 // In debug builds, translate LOGD to LOG, otherwise leave it out altogether:
