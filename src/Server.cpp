@@ -66,15 +66,15 @@ void NonCtrlHandler(int a_Signal)
 
 
 cServer::cServer(void) :
-	m_ListenThread(*this, cSocket::IPv4, "Client IPv4"),
-	m_bStop(false),
 	m_MainServerAddress("localhost"),
 	m_MainServerPort(25565),
 	m_MainServerName("Lobby"),
 	m_MOTD("MCProxy - A Minecraft Proxy Server"),
 	m_MaxPlayers(100),
 	m_PlayerAmount(0),
-	m_ShouldAuthenticate(true)
+	m_ShouldAuthenticate(true),
+        m_ListenThread(*this, cSocket::IPv4, "Client IPv4"),
+	m_bStop(false)
 {
 	s_Server = this;
 }
@@ -142,7 +142,7 @@ int cServer::Init(void)
 	}
 
 	m_ListenPort = m_Config.GetValueI("Proxy", "ListenPort");
-	if (m_ListenPort == NULL)
+	if (m_ListenPort == 0)
 	{
 		LOGWARN("ListenPort is wrong");
 		return 1;

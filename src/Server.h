@@ -69,13 +69,13 @@ public:
 private:
 
 	static cServer*	s_Server;
-
-	cThread * m_InputThread;
+        
+        cListenThread m_ListenThread;
 	bool m_bStop;
+        
+        cThread * m_InputThread;
 	static void InputThread(void* a_Params);
 	void ExecuteConsoleCommand(const AString & a_Cmd);
-
-	cListenThread m_ListenThread;
 
 	// cListenThread::cCallback overrides:
 	virtual void OnConnectionAccepted(cSocket & a_Socket) override;
