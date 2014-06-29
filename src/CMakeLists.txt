@@ -57,4 +57,4 @@ if (NOT MSVC)
 	target_link_libraries(${EXECUTABLE} PolarSSL++)
 endif ()
 
-target_link_libraries(${EXECUTABLE} zlib polarssl iniFile jsoncpp md5)
+target_link_libraries(${EXECUTABLE} polarssl iniFile jsoncpp md5)
