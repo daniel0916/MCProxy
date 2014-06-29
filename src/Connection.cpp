@@ -30,15 +30,6 @@
 		} \
 	}
 
-#define HANDLE_SERVER_PACKET_READ(Proc, Type, Var) \
-	Type Var; \
-	{ \
-		if (!m_ServerBuffer.Proc(Var)) \
-		{ \
-			return false; \
-		} \
-	}
-
 #define CLIENTSEND(...) \
 	{ \
 		if (m_IsClientEncrypted) \
@@ -51,58 +42,6 @@
 		} \
 	}
 #define SERVERSEND(...) SendData(m_ServerSocket, __VA_ARGS__, "Server")
-#define CLIENTENCRYPTSEND(...) SendEncryptedData(m_ClientSocket, m_ClientEncryptor, __VA_ARGS__, "Client")
-#define SERVERENCRYPTSEND(...) SendEncryptedData(m_ServerSocket, m_ServerEncryptor, __VA_ARGS__, "Server")
-
-#define COPY_TO_SERVER() \
-	{ \
-		AString ToServer; \
-		m_ClientBuffer.ReadAgain(ToServer); \
-		switch (m_ServerState) \
-		{ \
-			case csUnencrypted: \
-			{ \
-				SERVERSEND(ToServer.data(), ToServer.size()); \
-				break; \
-			} \
-			case csEncryptedUnderstood: \
-			case csEncryptedUnknown: \
-			{ \
-				SERVERENCRYPTSEND(ToServer.data(), ToServer.size()); \
-				break; \
-			} \
-			case csWaitingForEncryption: \
-			{ \
-				m_ServerEncryptionBuffer.append(ToServer.data(), ToServer.size()); \
-				break; \
-			} \
-		} \
-	}
-
-#define COPY_TO_CLIENT() \
-	{ \
-		AString ToClient; \
-		m_ServerBuffer.ReadAgain(ToClient); \
-		switch (m_ClientState) \
-		{ \
-			case csUnencrypted: \
-			{ \
-				CLIENTSEND(ToClient.data(), ToClient.size()); \
-				break; \
-			} \
-			case csEncryptedUnderstood: \
-			case csEncryptedUnknown: \
-			{ \
-				CLIENTENCRYPTSEND(ToClient.data(), ToClient.size()); \
-				break; \
-			} \
-			case csWaitingForEncryption: \
-			{ \
-				m_ClientEncryptionBuffer.append(ToClient.data(), ToClient.size()); \
-				break; \
-			} \
-		} \
-	}
 
 #define HANDLE_CLIENT_READ(Proc) \
 	{ \
@@ -114,16 +53,7 @@
 			return true; \
 		} \
 	}
-	
-#define HANDLE_SERVER_READ(Proc) \
-	{ \
-		if (!Proc) \
-		{ \
-			m_ServerBuffer.ResetRead(); \
-			return true; \
-		} \
-	}
-	
+
 
 
 
@@ -141,10 +71,10 @@ cConnection::cConnection(cSocket a_ClientSocket, cSocket a_ServerSocket, cServer
 	m_Server(a_Server),
 	m_ClientSocket(a_ClientSocket),
 	m_ServerSocket(a_ServerSocket),
-	m_ClientState(csUnencrypted),
-	m_ServerState(csUnencrypted),
 	m_ClientBuffer(1024 KiB),
 	m_ServerBuffer(1024 KiB),
+        m_ClientState(csUnencrypted),
+	m_ServerState(csUnencrypted),
 	m_IsServerEncrypted(false),
 	m_IsClientEncrypted(false),
 	m_SwitchServer(false),

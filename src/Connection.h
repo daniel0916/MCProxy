@@ -41,9 +41,6 @@ public:
 
 	cServerConnection * m_ServerConnection;
 	cServerConnection * m_OldServerConnection;
-	
-	bool m_AlreadyCountPlayer;
-	bool m_AlreadyRemovedPlayer;
 
 	AString m_UserName;
 	AString m_UUID;
@@ -97,11 +94,14 @@ public:
 	void StartEncryption(const Byte * a_Key);
 	AString m_AuthServerID;
 
-	bool m_SendedHandshake;
-
 	bool m_SwitchServer;
 	void SwitchServer(AString a_ServerAddress, short a_ServerPort);
 	AString m_NewServerName;
+        
+        bool m_AlreadyCountPlayer;
+	bool m_AlreadyRemovedPlayer;
+        
+        bool m_SendedHandshake;
 	
 protected:
 
