@@ -4,8 +4,8 @@
 // Interfaces to the cConnection class representing a single pair of connected sockets
 
 #include "Globals.h"
-#include "Protocol17x.cpp"
-#include "Protocol18x.cpp"
+#include "Protocol17x.h"
+#include "Protocol18x.h"
 #include "Connection.h"
 #include "Server.h"
 #include "ServerConnection.h"
