@@ -39,69 +39,6 @@
 		} \
 	}
 #define SERVERSEND(...) m_Connection->SendData(m_Connection->m_ServerSocket, __VA_ARGS__, "Server")
-#define CLIENTENCRYPTSEND(...) m_Connection->SendEncryptedData(m_Connection->m_ClientSocket, m_Connection->m_ClientEncryptor, __VA_ARGS__, "Client")
-#define SERVERENCRYPTSEND(...) m_Connection->SendEncryptedData(m_Connection->m_ServerSocket, m_Connection->m_ServerEncryptor, __VA_ARGS__, "Server")
-
-#define COPY_TO_SERVER() \
-	{ \
-		AString ToServer; \
-		m_Connection->m_ClientBuffer.ReadAgain(ToServer); \
-		switch (m_Connection->m_ServerState) \
-		{ \
-			case csUnencrypted: \
-			{ \
-				SERVERSEND(ToServer.data(), ToServer.size()); \
-				break; \
-			} \
-			case csEncryptedUnderstood: \
-			case csEncryptedUnknown: \
-			{ \
-				SERVERENCRYPTSEND(ToServer.data(), ToServer.size()); \
-				break; \
-			} \
-			case csWaitingForEncryption: \
-			{ \
-				m_Connection->m_ServerEncryptionBuffer.append(ToServer.data(), ToServer.size()); \
-				break; \
-			} \
-		} \
-	}
-
-#define COPY_TO_CLIENT() \
-	{ \
-		AString ToClient; \
-		m_Connection->m_ServerBuffer.ReadAgain(ToClient); \
-		switch (m_Connection->m_ClientState) \
-		{ \
-			case csUnencrypted: \
-			{ \
-				CLIENTSEND(ToClient.data(), ToClient.size()); \
-				break; \
-			} \
-			case csEncryptedUnderstood: \
-			case csEncryptedUnknown: \
-			{ \
-				CLIENTENCRYPTSEND(ToClient.data(), ToClient.size()); \
-				break; \
-			} \
-			case csWaitingForEncryption: \
-			{ \
-				m_Connection->m_ClientEncryptionBuffer.append(ToClient.data(), ToClient.size()); \
-				break; \
-			} \
-		} \
-	}
-
-#define HANDLE_CLIENT_READ(Proc) \
-	{ \
-		if (!Proc) \
-		{ \
-			AString Leftover; \
-			m_Connection->m_ClientBuffer.ReadAgain(Leftover); \
-			m_Connection->m_ClientBuffer.ResetRead(); \
-			return true; \
-		} \
-	}
 	
 #define HANDLE_SERVER_READ(Proc) \
 	{ \
@@ -264,7 +201,7 @@ bool cProtocol180::HandleServerOpenWindow(void)
 	HANDLE_SERVER_PACKET_READ(ReadByte, Byte, SlotNumbers);
 	HANDLE_SERVER_PACKET_READ(ReadBool, bool, ProvidedWindowTitle);
 
-	int HorseEntityID;
+	int HorseEntityID = 0;
 	if (InventoryType == 11)
 	{
 		HANDLE_SERVER_PACKET_READ(ReadBEInt, int, EntityID);
@@ -1587,9 +1524,9 @@ bool cProtocol180::HandleClientEntityAction(void)
 
 	m_Connection->m_ClientBuffer.CommitRead();
 
-	if (EntityID == m_ClientEntityID)
+	if ((int)EntityID == m_ClientEntityID)
 	{
-		EntityID = m_ServerEntityID;
+		EntityID = (int)m_ServerEntityID;
 	}
 
 	cByteBuffer Packet(512);
