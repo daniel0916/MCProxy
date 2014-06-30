@@ -12,7 +12,7 @@
 #include <iostream>
 #include <sstream>
 #include <csignal>
-#include "md5/md5.h"
+#include "polarssl/md5.h"
 
 
 bool g_TERMINATE_EVENT_RAISED = false;
@@ -281,22 +281,21 @@ void cServer::KickUser(const AString & a_Name, const AString & a_Reason)
 
 AString cServer::GenerateOfflineUUID(const AString & a_Username)
 {
+	// Online UUIDs are always version 4 (random)
+	// We use Version 3 (MD5 hash) UUIDs for the offline UUIDs
+	// This guarantees that they will never collide with an online UUID and can be distinguished.
 	// Proper format for a version 3 UUID is:
 	// xxxxxxxx-xxxx-3xxx-yxxx-xxxxxxxxxxxx where x is any hexadecimal digit and y is one of 8, 9, A, or B
-
+	
 	// Generate an md5 checksum, and use it as base for the ID:
-	MD5 Checksum(a_Username);
-	AString UUID = Checksum.hexdigest();
-	UUID[12] = '3';  // Version 3 UUID
-	UUID[16] = '8';  // Variant 1 UUID
-
-	// Now the digest doesn't have the UUID slashes, but the client requires them, so add them into the appropriate positions:
-	UUID.insert(8, "-");
-	UUID.insert(13, "-");
-	UUID.insert(18, "-");
-	UUID.insert(23, "-");
-
-	return UUID;
+	unsigned char MD5[16];
+	md5((const unsigned char *)a_Username.c_str(), a_Username.length(), MD5);
+	return Printf("%02x%02x%02x%02x-%02x%02x-3%01x%02x-8%01x%02x-%02x%02x%02x%02x%02x%02x",
+		MD5[0],  MD5[1],  MD5[2], MD5[3],
+		MD5[4],  MD5[5],  MD5[6], MD5[7],
+		MD5[8],  MD5[9],  MD5[10], MD5[11],
+		MD5[12], MD5[13], MD5[14], MD5[15]
+	);
 }
 
 
