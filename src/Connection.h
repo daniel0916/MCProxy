@@ -10,7 +10,6 @@
 #pragma once
 
 #include "ByteBuffer.h"
-#include "Timer.h"
 #include "SocketThreads.h"
 #include "PolarSSL++/AesCfb128Decryptor.h"
 #include "PolarSSL++/AesCfb128Encryptor.h"
