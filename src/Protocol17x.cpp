@@ -127,9 +127,9 @@ const int MAX_ENC_LEN = 512;  // Maximum size of the encrypted message; should b
 // cProtocol172:
 
 cProtocol172::cProtocol172(cConnection * a_Connection) :
-	m_Connection(a_Connection),
+        m_ClientProtocolState(-1),
 	m_ServerProtocolState(-1),
-	m_ClientProtocolState(-1)
+        m_Connection(a_Connection)
 {
 }
 
@@ -1162,14 +1162,14 @@ bool cProtocol172::HandleServerPlayerAnimation(void)
 	HANDLE_SERVER_PACKET_READ(ReadVarInt, UInt32, PlayerID);
 	HANDLE_SERVER_PACKET_READ(ReadByte, Byte, AnimationID);
 
-	if (PlayerID == m_ServerEntityID)
+	if ((int)PlayerID == m_ServerEntityID)
 	{
 		m_Connection->m_ServerBuffer.CommitRead();
 
 		// Send the same packet, but with modified Entity ID:
 		cByteBuffer Packet(512);
 		Packet.WriteByte(0x0B);
-		Packet.WriteVarInt(m_ClientEntityID);
+		Packet.WriteVarInt((UInt32)m_ClientEntityID);
 		Packet.WriteByte(AnimationID);
 		AString Pkt;
 		Packet.ReadAll(Pkt);
