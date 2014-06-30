@@ -326,7 +326,7 @@ bool cByteBuffer::ReadBEShort(short & a_Value)
 	CheckValid();
 	NEEDBYTES(2);
 	ReadBuf(&a_Value, 2);
-	a_Value = (short)ntohs((short)a_Value);
+	a_Value = (short)ntohs((UInt16)a_Value);
 	return true;
 }
 
@@ -437,7 +437,7 @@ bool cByteBuffer::ReadVarInt(UInt32 & a_Value)
 	{
 		NEEDBYTES(1);
 		ReadBuf(&b, 1);
-		Value = Value | (((Int64)(b & 0x7f)) << Shift);
+		Value = (UInt32) Value | (((Int64)(b & 0x7f)) << Shift);
 		Shift += 7;
 	} while ((b & 0x80) != 0);
 	a_Value = Value;

@@ -178,7 +178,7 @@ bool cConnection::DecodeClientsPackets(const char * a_Data, size_t a_Size)
 			break;
 		}
 		UInt32 PacketType, PacketReadSoFar;
-		PacketReadSoFar = m_ClientBuffer.GetReadableSpace();
+		PacketReadSoFar = (UInt32)m_ClientBuffer.GetReadableSpace();
 		VERIFY(m_ClientBuffer.ReadVarInt(PacketType));
 		PacketReadSoFar -= m_ClientBuffer.GetReadableSpace();
 
@@ -236,7 +236,7 @@ bool cConnection::DecodeServersPackets(const char * a_Data, size_t a_Size)
 			break;
 		}
 		UInt32 PacketType, PacketReadSoFar;
-		PacketReadSoFar = m_ServerBuffer.GetReadableSpace();
+		PacketReadSoFar = (UInt32)m_ServerBuffer.GetReadableSpace();
 		VERIFY(m_ServerBuffer.ReadVarInt(PacketType));
 		PacketReadSoFar -= m_ServerBuffer.GetReadableSpace();
 
