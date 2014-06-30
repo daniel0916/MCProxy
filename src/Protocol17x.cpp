@@ -281,14 +281,14 @@ bool cProtocol172::HandleClientLoginEncryptionKeyResponse(void)
 {
 	HANDLE_CLIENT_PACKET_READ(ReadBEShort, short, EncKeyLength);
 	AString EncKey;
-	if (!m_Connection->m_ClientBuffer.ReadString(EncKey, EncKeyLength))
+	if (!m_Connection->m_ClientBuffer.ReadString(EncKey, (size_t)EncKeyLength))
 	{
 		return false;
 	}
 
 	HANDLE_CLIENT_PACKET_READ(ReadBEShort, short, EncNonceLength);
 	AString EncNonce;
-	if (!m_Connection->m_ClientBuffer.ReadString(EncNonce, EncNonceLength))
+	if (!m_Connection->m_ClientBuffer.ReadString(EncNonce, (size_t)EncNonceLength))
 	{
 		return false;
 	}
@@ -312,7 +312,7 @@ bool cProtocol172::HandleClientLoginEncryptionKeyResponse(void)
 		m_Connection->Kick("Hacked client");
 		return false;
 	}
-	if (ntohl(DecryptedNonce[0]) != (unsigned)(uintptr_t)this)
+	if (ntohl((uint32_t)DecryptedNonce[0]) != (unsigned)(uintptr_t)this)
 	{
 		LOGD("Bad nonce value");
 		m_Connection->Kick("Hacked client");
@@ -591,13 +591,13 @@ bool cProtocol172::HandleServerLoginEncryptionKeyRequest(void)
 	HANDLE_SERVER_PACKET_READ(ReadVarUTF8String, AString, ServerID);
 	HANDLE_SERVER_PACKET_READ(ReadBEShort, short, PublicKeyLength);
 	AString PublicKey;
-	if (!m_Connection->m_ServerBuffer.ReadString(PublicKey, PublicKeyLength))
+	if (!m_Connection->m_ServerBuffer.ReadString(PublicKey, (size_t)PublicKeyLength))
 	{
 		return false;
 	}
 	HANDLE_SERVER_PACKET_READ(ReadBEShort, short, NonceLength);
 	AString Nonce;
-	if (!m_Connection->m_ServerBuffer.ReadString(Nonce, NonceLength))
+	if (!m_Connection->m_ServerBuffer.ReadString(Nonce, (size_t)NonceLength))
 	{
 		return false;
 	}
@@ -1128,8 +1128,8 @@ bool cProtocol172::HandleServerJoinGame(void)
 		cByteBuffer RespawnPacket3(512);
 		RespawnPacket3.WriteByte(0x07);
 		RespawnPacket3.WriteBEInt(Dimension);
-		RespawnPacket3.WriteByte(Difficulty);
-		RespawnPacket3.WriteByte(GameMode);
+		RespawnPacket3.WriteByte((Byte)Difficulty);
+		RespawnPacket3.WriteByte((Byte)GameMode);
 		RespawnPacket3.WriteVarUTF8String(LevelType);
 		AString Respawn3Pkt;
 		RespawnPacket3.ReadAll(Respawn3Pkt);
@@ -1339,7 +1339,7 @@ bool cProtocol172::HandleServerPluginMessage(void)
 	HANDLE_SERVER_PACKET_READ(ReadBEShort, short, Length);
 
 	AString data;
-	if (!m_Connection->m_ServerBuffer.ReadString(data, Length))
+	if (!m_Connection->m_ServerBuffer.ReadString(data, (size_t)Length))
 	{
 		return false;
 	}
@@ -1510,13 +1510,13 @@ bool cProtocol172::ParseSlot(cByteBuffer & a_Buffer, cByteBuffer & a_Packet)
 		return true;
 	}
 	AString Metadata;
-	Metadata.resize(MetadataLength);
-	if (!a_Buffer.ReadBuf((void *)Metadata.data(), MetadataLength))
+	Metadata.resize((size_t)MetadataLength);
+	if (!a_Buffer.ReadBuf((void *)Metadata.data(), (size_t)MetadataLength))
 	{
 		return false;
 	}
 
-	a_Packet.WriteBuf((void *)Metadata.data(), MetadataLength);
+	a_Packet.WriteBuf((void *)Metadata.data(), (size_t)MetadataLength);
 
 	return true;
 }
@@ -1538,7 +1538,7 @@ bool cProtocol172::ParseMetadata(cByteBuffer & a_Buffer, cByteBuffer & a_Packet)
 	{
 		// int Index = ((unsigned)((unsigned char)x)) & 0x1f;  // Lower 5 bits = index
 		int Type = ((unsigned)((unsigned char)x)) >> 5;    // Upper 3 bits = type
-		int Length = 0;
+		size_t Length = 0;
 		switch (Type)
 		{
 			case 0: Length = 1; break;  // Byte
@@ -1548,7 +1548,7 @@ bool cProtocol172::ParseMetadata(cByteBuffer & a_Buffer, cByteBuffer & a_Packet)
 			case 4:  // UTF-8 string with VarInt length
 			{
 				UInt32 Len;
-				int rs = a_Buffer.GetReadableSpace();
+				size_t rs = a_Buffer.GetReadableSpace();
 				if (!a_Buffer.ReadVarInt(Len))
 				{
 					return false;
@@ -1558,17 +1558,17 @@ bool cProtocol172::ParseMetadata(cByteBuffer & a_Buffer, cByteBuffer & a_Packet)
 				LenBuf.WriteVarInt(Len);
 				AString VarLen;
 				LenBuf.ReadAll(VarLen);
-				Length = Len;
+				Length = (size_t)Len;
 				break;
 			}
 			case 5:
 			{
-				int Before = a_Buffer.GetReadableSpace();
+				size_t Before = a_Buffer.GetReadableSpace();
 				if (!ParseSlot(a_Buffer, a_Packet))
 				{
 					return false;
 				}
-				int After = a_Buffer.GetReadableSpace();
+				size_t After = a_Buffer.GetReadableSpace();
 				a_Buffer.ResetRead();
 				a_Buffer.SkipRead(a_Buffer.GetReadableSpace() - Before);
 				Length = Before - After;

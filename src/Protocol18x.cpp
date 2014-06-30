@@ -467,7 +467,7 @@ bool cProtocol180::HandleServerUpdateBlockEntity(void)
 	AString NBTData;
 	if (DataLength > 0)
 	{
-		if (!m_Connection->m_ServerBuffer.ReadBuf((void *)NBTData.data(), DataLength))
+		if (!m_Connection->m_ServerBuffer.ReadBuf((void *)NBTData.data(), (size_t)DataLength))
 		{
 			return false;
 		}
@@ -482,7 +482,7 @@ bool cProtocol180::HandleServerUpdateBlockEntity(void)
 	Packet.WriteBEShort(DataLength);
 	if (DataLength > 0)
 	{
-		Packet.WriteBuf((void *)NBTData.data(), DataLength);
+		Packet.WriteBuf((void *)NBTData.data(), (size_t)DataLength);
 	}
 	AString Pkt;
 	Packet.ReadAll(Pkt);
@@ -962,7 +962,7 @@ bool cProtocol180::HandleServerEntityEffect(void)
 	Packet.WriteVarInt((UInt32)EntityID);
 	Packet.WriteByte(EffectID);
 	Packet.WriteByte(Amplifier);
-	Packet.WriteVarInt(Duration);
+	Packet.WriteVarInt((UInt32)Duration);
 	Packet.WriteBool(false);
 	AString Pkt;
 	Packet.ReadAll(Pkt);
@@ -1227,7 +1227,7 @@ bool cProtocol180::HandleServerSpawnPainting(void)
 	Packet.WriteVarInt(EntityID);
 	Packet.WriteVarUTF8String(Title);
 	Packet.WritePosition(PosX, PosY, PosZ);
-	Packet.WriteByte(Direction);
+	Packet.WriteByte((Byte)Direction);
 	AString Pkt;
 	Packet.ReadAll(Pkt);
 	cByteBuffer ToClient(512);
@@ -1364,7 +1364,7 @@ bool cProtocol180::HandleClientPlayerDigging(void)
 	int BlockY = Position << 26 >> 52;
 	int BlockZ = Position << 38 >> 38;
 	Packet.WriteBEInt(BlockX);
-	Packet.WriteByte(BlockY);
+	Packet.WriteByte((Byte)BlockY);
 	Packet.WriteBEInt(BlockZ);
 
 	Packet.WriteByte(Face);
@@ -1526,7 +1526,7 @@ bool cProtocol180::HandleClientEntityAction(void)
 
 	if ((int)EntityID == m_ClientEntityID)
 	{
-		EntityID = (int)m_ServerEntityID;
+		EntityID = (UInt32)m_ServerEntityID;
 	}
 
 	cByteBuffer Packet(512);
@@ -1699,7 +1699,7 @@ bool cProtocol180::HandleClientPluginMessage(void)
 	HANDLE_CLIENT_PACKET_READ(ReadBEShort, short, Length);
 
 	AString data;
-	if (!m_Connection->m_ClientBuffer.ReadString(data, Length))
+	if (!m_Connection->m_ClientBuffer.ReadString(data, (size_t)Length))
 	{
 		return false;
 	}

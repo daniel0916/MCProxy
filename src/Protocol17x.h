@@ -28,6 +28,7 @@ class cProtocol172
 public:
 
 	cProtocol172(cConnection * a_Connection);
+        ~cProtocol172(void);
 
 	virtual bool HandleClientPackets(UInt32 a_PacketType, UInt32 a_PacketLen, UInt32 a_PacketReadSoFar);
 	virtual bool HandleServerPackets(UInt32 a_PacketType, UInt32 a_PacketLen, UInt32 a_PacketReadSoFar);

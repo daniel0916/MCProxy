@@ -311,7 +311,7 @@ void cServer::OnConnectionAccepted(cSocket & a_Socket)
 	}
 
 	cSocket Socket = cSocket(ServerSocket);
-	if (!Socket.ConnectIPv4(m_MainServerAddress, m_MainServerPort))
+	if (!Socket.ConnectIPv4(m_MainServerAddress, (unsigned short)m_MainServerPort))
 	{
 		return;
 	}

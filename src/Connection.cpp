@@ -99,7 +99,7 @@ cConnection::~cConnection()
 
 bool cConnection::SendData(cSocket a_Socket, const char * a_Data, size_t a_Size, const char * a_Peer)
 {
-	int res = a_Socket.Send(a_Data, a_Size);
+	int res = a_Socket.Send(a_Data, (unsigned int)a_Size);
 	if (res <= 0)
 	{
 		return false;
@@ -159,7 +159,7 @@ bool cConnection::SendEncryptedData(cSocket a_Socket, cAesCfb128Encryptor & a_En
 
 
 
-bool cConnection::DecodeClientsPackets(const char * a_Data, int a_Size)
+bool cConnection::DecodeClientsPackets(const char * a_Data, size_t a_Size)
 {
 	if (!m_ClientBuffer.Write(a_Data, a_Size))
 	{
@@ -200,7 +200,7 @@ bool cConnection::DecodeClientsPackets(const char * a_Data, int a_Size)
 
 
 
-bool cConnection::DecodeServersPackets(const char * a_Data, int a_Size)
+bool cConnection::DecodeServersPackets(const char * a_Data, size_t a_Size)
 {
 	if (!m_ServerBuffer.Write(a_Data, a_Size))
 	{
@@ -295,7 +295,7 @@ bool cConnection::HandleClientHandshake(void)
 	Packet.WriteVarInt(0);  // Packet type - initial handshake
 	Packet.WriteVarInt(5);
 	Packet.WriteVarUTF8String(ServerHost);
-	Packet.WriteBEShort(cServer::Get()->m_ListenPort);
+	Packet.WriteBEShort((short)cServer::Get()->m_ListenPort);
 	Packet.WriteVarInt(NextState);
 	AString Pkt;
 	Packet.ReadAll(Pkt);
@@ -365,7 +365,7 @@ void cConnection::SwitchServer(AString a_ServerAddress, short a_ServerPort)
 	}
 
 	cSocket Socket = cSocket(ServerSocket);
-	if (!Socket.ConnectIPv4(a_ServerAddress, a_ServerPort))
+	if (!Socket.ConnectIPv4(a_ServerAddress, (unsigned short)a_ServerPort))
 	{
 		m_Protocol->SendChatMessage("Can't connect to server!", "c");
 		return;

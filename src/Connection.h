@@ -105,10 +105,10 @@ public:
 protected:
 
 	/// Decodes packets coming from the client, sends appropriate counterparts to the server; returns false if the connection is to be dropped
-	bool DecodeClientsPackets(const char * a_Data, int a_Size);
+	bool DecodeClientsPackets(const char * a_Data, size_t a_Size);
 
 	/// Decodes packets coming from the server, sends appropriate counterparts to the client; returns false if the connection is to be dropped
-	bool DecodeServersPackets(const char * a_Data, int a_Size);
+	bool DecodeServersPackets(const char * a_Data, size_t a_Size);
 	
 	// Packet handling, client-side, initial:
 	bool HandleClientHandshake(void);
