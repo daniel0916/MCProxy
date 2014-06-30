@@ -326,7 +326,7 @@ bool cByteBuffer::ReadBEShort(short & a_Value)
 	CheckValid();
 	NEEDBYTES(2);
 	ReadBuf(&a_Value, 2);
-	a_Value = ntohs(a_Value);
+	a_Value = (short)ntohs((short)a_Value);
 	return true;
 }
 
@@ -340,7 +340,7 @@ bool cByteBuffer::ReadBEInt(int & a_Value)
 	CheckValid();
 	NEEDBYTES(4);
 	ReadBuf(&a_Value, 4);
-	a_Value = ntohl(a_Value);
+	a_Value = (int)ntohl((UInt32)a_Value);
 	return true;
 }
 
@@ -461,7 +461,7 @@ bool cByteBuffer::ReadVarUTF8String(AString & a_Value)
 	{
 		LOGWARNING("%s: String too large: %u (%u KiB)", __FUNCTION__, Size, Size / 1024);
 	}
-	return ReadString(a_Value, (int)Size);
+	return ReadString(a_Value, (size_t)Size);
 }
 
 
@@ -516,7 +516,7 @@ bool cByteBuffer::WriteBEShort(short a_Value)
 	CHECK_THREAD;
 	CheckValid();
 	PUTBYTES(2);
-	short Converted = htons(a_Value);
+	short Converted = (short)htons((UInt16)a_Value);
 	return WriteBuf(&Converted, 2);
 }
 
@@ -529,7 +529,7 @@ bool cByteBuffer::WriteBEInt(int a_Value)
 	CHECK_THREAD;
 	CheckValid();
 	PUTBYTES(4);
-	int Converted = HostToNetwork4(&a_Value);
+	int Converted = (int)HostToNetwork4(&a_Value);
 	return WriteBuf(&Converted, 4);
 }
 
@@ -542,7 +542,7 @@ bool cByteBuffer::WriteBEInt64(Int64 a_Value)
 	CHECK_THREAD;
 	CheckValid();
 	PUTBYTES(8);
-	Int64 Converted = HostToNetwork8(&a_Value);
+	Int64 Converted = (Int64)HostToNetwork8(&a_Value);
 	return WriteBuf(&Converted, 8);
 }
 
@@ -555,7 +555,7 @@ bool cByteBuffer::WriteBEFloat(float a_Value)
 	CHECK_THREAD;
 	CheckValid();
 	PUTBYTES(4);
-	int Converted = HostToNetwork4(&a_Value);
+	int Converted = (int)HostToNetwork4(&a_Value);
 	return WriteBuf(&Converted, 4);
 }
 
@@ -568,7 +568,7 @@ bool cByteBuffer::WriteBEDouble(double a_Value)
 	CHECK_THREAD;
 	CheckValid();
 	PUTBYTES(8);
-	Int64 Converted = HostToNetwork8(&a_Value);
+	Int64 Converted = (Int64)HostToNetwork8(&a_Value);
 	return WriteBuf(&Converted, 8);
 }
 
@@ -620,7 +620,7 @@ bool cByteBuffer::WriteVarInt(UInt32 a_Value)
 		idx++;
 	} while (a_Value > 0);
 
-	return WriteBuf(b, idx);
+	return WriteBuf(b, (size_t)idx);
 }
 
 
@@ -631,7 +631,7 @@ bool cByteBuffer::WriteVarUTF8String(const AString & a_Value)
 	CHECK_THREAD;
 	CheckValid();
 	PUTBYTES(a_Value.size() + 1);  // This is a lower-bound on the bytes that will be actually written. Fail early.
-	bool res = WriteVarInt(a_Value.size());
+	bool res = WriteVarInt((UInt32)a_Value.size());
 	if (!res)
 	{
 		return false;
@@ -763,7 +763,7 @@ bool cByteBuffer::ReadUTF16String(AString & a_String, int a_NumChars)
 	CheckValid();
 	ASSERT(a_NumChars >= 0);
 	AString RawData;
-	if (!ReadString(RawData, a_NumChars * 2))
+	if (!ReadString(RawData, (size_t)a_NumChars * 2))
 	{
 		return false;
 	}
@@ -903,7 +903,7 @@ bool cByteBuffer::WritePosition(int a_PosX, int a_PosY, int a_PosZ)
 	UInt64 encoded_y = a_PosY & 0xFFF;
 	UInt64 encoded_z = a_PosZ & 0x3FFFFFF;
 	UInt64 value = (encoded_x << 38) | (encoded_y << 26) | encoded_z;
-	return WriteBEInt64(value);
+	return WriteBEInt64((Int64)value);
 }
 
 

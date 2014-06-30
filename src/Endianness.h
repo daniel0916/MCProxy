@@ -12,7 +12,7 @@ inline UInt64 HostToNetwork8(const void * a_Value)
 {
 	unsigned long long __HostToNetwork8;
 	memcpy( &__HostToNetwork8, a_Value, sizeof( __HostToNetwork8 ) );
-	__HostToNetwork8 = (( ( (unsigned long long)htonl((u_long)__HostToNetwork8) ) << 32) + htonl(__HostToNetwork8 >> 32));
+	__HostToNetwork8 = (( ( (unsigned long long)htonl((uint32_t)__HostToNetwork8) ) << 32) + htonl(__HostToNetwork8 >> 32));
 	return __HostToNetwork8;
 }
 
@@ -36,7 +36,7 @@ inline double NetworkToHostDouble8(const void * a_Value)
 {
 	UInt64 buf = 0;
 	memcpy(&buf, a_Value, 8);
-	buf = ntohll(buf);
+	buf = (UInt64)ntohll(buf);
 	double x;
 	memcpy(&x, &buf, sizeof(double));
 	return x;
@@ -50,7 +50,7 @@ inline Int64 NetworkToHostLong8(const void * a_Value)
 {
 	UInt64 buf;
 	memcpy(&buf, a_Value, 8);
-	buf = ntohll(buf);
+	buf = (UInt64)ntohll(buf);
 	return *reinterpret_cast<Int64 *>(&buf);
 }
 

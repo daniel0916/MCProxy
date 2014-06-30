@@ -151,8 +151,8 @@ bool cListenThread::CreateSockets(const AString & a_PortsString)
 		bool res = false;
 		switch (m_Family)
 		{
-			case cSocket::IPv4: res = m_Sockets.back().BindToAnyIPv4(Port); break;
-			case cSocket::IPv6: res = m_Sockets.back().BindToAnyIPv6(Port); break;
+			case cSocket::IPv4: res = m_Sockets.back().BindToAnyIPv4((unsigned short)Port); break;
+			case cSocket::IPv6: res = m_Sockets.back().BindToAnyIPv6((unsigned short)Port); break;
 			default:
 			{
 				ASSERT(!"Unknown address family");
