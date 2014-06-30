@@ -768,6 +768,7 @@ bool cProtocol180::HandleServerEntityRelativeMove(void)
 	Packet.WriteByte(dx);
 	Packet.WriteByte(dy);
 	Packet.WriteByte(dz);
+        Packet.WriteBool(true);
 	AString Pkt;
 	Packet.ReadAll(Pkt);
 	cByteBuffer ToClient(512);
@@ -799,6 +800,7 @@ bool cProtocol180::HandleServerEntityLook(void)
 	Packet.WriteVarInt((UInt32)EntityID);
 	Packet.WriteByte(Yaw);
 	Packet.WriteByte(Pitch);
+        Packet.WriteBool(true);
 	AString Pkt;
 	Packet.ReadAll(Pkt);
 	cByteBuffer ToClient(512);
@@ -836,6 +838,7 @@ bool cProtocol180::HandleServerEntityRelativeMoveLook(void)
 	Packet.WriteByte(dz);
 	Packet.WriteByte(Yaw);
 	Packet.WriteByte(Pitch);
+        Packet.WriteBool(true);
 	AString Pkt;
 	Packet.ReadAll(Pkt);
 	cByteBuffer ToClient(512);
@@ -873,6 +876,7 @@ bool cProtocol180::HandleServerEntityTeleport(void)
 	Packet.WriteBEInt(AbsZ);
 	Packet.WriteByte(Yaw);
 	Packet.WriteByte(Pitch);
+        Packet.WriteBool(true);
 	AString Pkt;
 	Packet.ReadAll(Pkt);
 	cByteBuffer ToClient(512);

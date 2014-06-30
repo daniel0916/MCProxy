@@ -12,7 +12,7 @@ inline UInt64 HostToNetwork8(const void * a_Value)
 {
 	unsigned long long __HostToNetwork8;
 	memcpy( &__HostToNetwork8, a_Value, sizeof( __HostToNetwork8 ) );
-	__HostToNetwork8 = (( ( (unsigned long long)htonl((uint32_t)__HostToNetwork8) ) << 32) + htonl(__HostToNetwork8 >> 32));
+	__HostToNetwork8 = (( ( (unsigned long long)htonl((UInt32)__HostToNetwork8) ) << 32) + htonl(__HostToNetwork8 >> 32));
 	return __HostToNetwork8;
 }
 

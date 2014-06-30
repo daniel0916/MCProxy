@@ -271,7 +271,7 @@ bool cConnection::HandleClientHandshake(void)
 	{
 		m_Protocol = new cProtocol176(this);
 	}
-	else if (ProtocolVersion == 19)
+	else if (ProtocolVersion == 22)
 	{
 		m_Protocol = new cProtocol180(this);
 	}
