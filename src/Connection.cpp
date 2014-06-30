@@ -73,15 +73,15 @@ cConnection::cConnection(cSocket a_ClientSocket, cSocket a_ServerSocket, cServer
 	m_ServerSocket(a_ServerSocket),
 	m_ClientBuffer(1024 KiB),
 	m_ServerBuffer(1024 KiB),
-        m_ClientState(csUnencrypted),
-	m_ServerState(csUnencrypted),
 	m_IsServerEncrypted(false),
 	m_IsClientEncrypted(false),
+        m_ClientState(csUnencrypted),
+	m_ServerState(csUnencrypted),
 	m_SwitchServer(false),
 	m_AlreadyCountPlayer(false),
 	m_AlreadyRemovedPlayer(false),
-	m_Protocol(NULL),
-	m_SendedHandshake(false)
+	m_SendedHandshake(false),
+        m_Protocol(NULL)
 {
 }
 
@@ -579,7 +579,6 @@ bool cConnection::SendToClient(const char * a_Data, size_t a_Size)
 			return true;
 		}
 	}
-	return false;
 }
 
 
