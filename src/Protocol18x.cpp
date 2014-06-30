@@ -294,7 +294,7 @@ bool cProtocol180::HandleServerUseBed(void)
 
 	cByteBuffer Packet(512);
 	Packet.WriteByte(0x0A);
-	Packet.WriteVarInt(EntityID);
+	Packet.WriteVarInt((UInt32)EntityID);
 	Packet.WritePosition(PosX, PosY, PosZ);
 	AString Pkt;
 	Packet.ReadAll(Pkt);
@@ -528,7 +528,7 @@ bool cProtocol180::HandleServerEntityEquipment(void)
 
 	cByteBuffer Packet(512);
 	Packet.WriteByte(0x04);
-	Packet.WriteVarInt(EntityID);
+	Packet.WriteVarInt((UInt32)EntityID);
 	Packet.WriteBEShort(Slot);
 
 	if (!ParseSlot(m_Connection->m_ServerBuffer, Packet))
@@ -562,7 +562,7 @@ bool cProtocol180::HandleServerUpdateHealth(void)
 	cByteBuffer Packet(512);
 	Packet.WriteByte(0x06);
 	Packet.WriteBEFloat(Health);
-	Packet.WriteVarInt(Food);
+	Packet.WriteVarInt((UInt32)Food);
 	Packet.WriteBEFloat(FoodSaturation);
 	AString Pkt;
 	Packet.ReadAll(Pkt);
@@ -643,8 +643,8 @@ bool cProtocol180::HandleServerCollectPickup(void)
 
 	cByteBuffer Packet(512);
 	Packet.WriteByte(0x0D);
-	Packet.WriteVarInt(CollectedID);
-	Packet.WriteVarInt(CollectorID);
+	Packet.WriteVarInt((UInt32)CollectedID);
+	Packet.WriteVarInt((UInt32)CollectorID);
 	AString Pkt;
 	Packet.ReadAll(Pkt);
 	cByteBuffer ToClient(512);
@@ -674,7 +674,7 @@ bool cProtocol180::HandleServerEntityVelocity(void)
 
 	cByteBuffer Packet(512);
 	Packet.WriteByte(0x12);
-	Packet.WriteVarInt(EntityID);
+	Packet.WriteVarInt((UInt32)EntityID);
 	Packet.WriteBEShort(VelocityX);
 	Packet.WriteBEShort(VelocityY);
 	Packet.WriteBEShort(VelocityZ);
@@ -701,9 +701,9 @@ bool cProtocol180::HandleServerDestroyEntities(void)
 
 	for (int i = 0; i < ArrayLength; i++)
 	{
-		HANDLE_SERVER_PACKET_READ(ReadVarInt, UInt32, EntityID);
+		HANDLE_SERVER_PACKET_READ(ReadBEInt, int, EntityID);
 
-		Packet.WriteVarInt(EntityID);
+		Packet.WriteVarInt((UInt32)EntityID);
 	}
 
 	m_Connection->m_ServerBuffer.CommitRead();
@@ -734,7 +734,7 @@ bool cProtocol180::HandleServerEntity(void)
 
 	cByteBuffer Packet(512);
 	Packet.WriteByte(0x14);
-	Packet.WriteVarInt(EntityID);
+	Packet.WriteVarInt((UInt32)EntityID);
 	AString Pkt;
 	Packet.ReadAll(Pkt);
 	cByteBuffer ToClient(512);
@@ -764,7 +764,7 @@ bool cProtocol180::HandleServerEntityRelativeMove(void)
 
 	cByteBuffer Packet(512);
 	Packet.WriteByte(0x15);
-	Packet.WriteVarInt(EntityID);
+	Packet.WriteVarInt((UInt32)EntityID);
 	Packet.WriteByte(dx);
 	Packet.WriteByte(dy);
 	Packet.WriteByte(dz);
@@ -796,7 +796,7 @@ bool cProtocol180::HandleServerEntityLook(void)
 
 	cByteBuffer Packet(512);
 	Packet.WriteByte(0x16);
-	Packet.WriteVarInt(EntityID);
+	Packet.WriteVarInt((UInt32)EntityID);
 	Packet.WriteByte(Yaw);
 	Packet.WriteByte(Pitch);
 	AString Pkt;
@@ -830,7 +830,7 @@ bool cProtocol180::HandleServerEntityRelativeMoveLook(void)
 
 	cByteBuffer Packet(512);
 	Packet.WriteByte(0x17);
-	Packet.WriteVarInt(EntityID);
+	Packet.WriteVarInt((UInt32)EntityID);
 	Packet.WriteByte(dx);
 	Packet.WriteByte(dy);
 	Packet.WriteByte(dz);
@@ -867,7 +867,7 @@ bool cProtocol180::HandleServerEntityTeleport(void)
 
 	cByteBuffer Packet(512);
 	Packet.WriteByte(0x18);
-	Packet.WriteVarInt(EntityID);
+	Packet.WriteVarInt((UInt32)EntityID);
 	Packet.WriteBEInt(AbsX);
 	Packet.WriteBEInt(AbsY);
 	Packet.WriteBEInt(AbsZ);
@@ -900,7 +900,7 @@ bool cProtocol180::HandleServerEntityHeadLook(void)
 
 	cByteBuffer Packet(512);
 	Packet.WriteByte(0x19);
-	Packet.WriteVarInt(EntityID);
+	Packet.WriteVarInt((UInt32)EntityID);
 	Packet.WriteByte(HeadYaw);
 	AString Pkt;
 	Packet.ReadAll(Pkt);
@@ -926,7 +926,7 @@ bool cProtocol180::HandleServerEntityMetadata(void)
 
 	cByteBuffer Packet(512);
 	Packet.WriteByte(0x1C);
-	Packet.WriteVarInt(EntityID);
+	Packet.WriteVarInt((UInt32)EntityID);
 
 	if (!ParseMetadata(m_Connection->m_ServerBuffer, Packet))
 	{
@@ -959,7 +959,7 @@ bool cProtocol180::HandleServerEntityEffect(void)
 
 	cByteBuffer Packet(512);
 	Packet.WriteByte(0x1D);
-	Packet.WriteVarInt(EntityID);
+	Packet.WriteVarInt((UInt32)EntityID);
 	Packet.WriteByte(EffectID);
 	Packet.WriteByte(Amplifier);
 	Packet.WriteVarInt(Duration);
@@ -986,7 +986,7 @@ bool cProtocol180::HandleServerRemoveEntityEffect(void)
 
 	cByteBuffer Packet(512);
 	Packet.WriteByte(0x1E);
-	Packet.WriteVarInt(EntityID);
+	Packet.WriteVarInt((UInt32)EntityID);
 	Packet.WriteByte(EffectID);
 	AString Pkt;
 	Packet.ReadAll(Pkt);
@@ -1012,8 +1012,8 @@ bool cProtocol180::HandleServerSetExperience(void)
 	cByteBuffer Packet(512);
 	Packet.WriteByte(0x1F);
 	Packet.WriteBEFloat(ExperienceBar);
-	Packet.WriteVarInt(Level);
-	Packet.WriteVarInt(TotalExperience);
+	Packet.WriteVarInt((UInt32)Level);
+	Packet.WriteVarInt((UInt32)TotalExperience);
 	AString Pkt;
 	Packet.ReadAll(Pkt);
 	cByteBuffer ToClient(512);
@@ -1039,7 +1039,7 @@ bool cProtocol180::HandleServerEntityProperties(void)
 
 	cByteBuffer Packet(512);
 	Packet.WriteByte(0x20);
-	Packet.WriteVarInt(EntityID);
+	Packet.WriteVarInt((UInt32)EntityID);
 	Packet.WriteBEInt(Count);
 
 	for (int i = 0; i < Count; i++)
@@ -1050,7 +1050,7 @@ bool cProtocol180::HandleServerEntityProperties(void)
 
 		Packet.WriteVarUTF8String(Key);
 		Packet.WriteBEDouble(Value);
-		Packet.WriteVarInt(ListLength);
+		Packet.WriteVarInt((UInt32)ListLength);
 
 		for (short j = 0; j < ListLength; j++)
 		{
@@ -1128,7 +1128,7 @@ bool cProtocol180::HandleServerUpdateScore(void)
 	Packet.WriteVarUTF8String(ItemName);
 	Packet.WriteByte(UpdateRemove);
 	Packet.WriteVarUTF8String(ScoreName);
-	Packet.WriteVarInt(Value);
+	Packet.WriteVarInt((UInt32)Value);
 	AString Pkt;
 	Packet.ReadAll(Pkt);
 	cByteBuffer ToClient(512);
@@ -1170,7 +1170,7 @@ bool cProtocol180::HandleServerTeams(void)
 	{
 		HANDLE_SERVER_PACKET_READ(ReadBEShort, short, PlayerCount);
 
-		Packet.WriteVarInt(PlayerCount);
+		Packet.WriteVarInt((UInt32)PlayerCount);
 
 		for (short i = 0; i < PlayerCount; i++)
 		{
