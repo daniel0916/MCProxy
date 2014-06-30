@@ -29,8 +29,6 @@ typedef std::list<cConnection *> cConnectionList;
 class cServer
 	: public cListenThread::cCallback
 {
-	SOCKET m_ListenSocket;
-	
 public:
 	cServer(void);
 	~cServer(void);
