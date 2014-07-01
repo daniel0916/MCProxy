@@ -7,6 +7,9 @@
 
 #include "File.h"
 #include <fstream>
+#ifdef _WIN32
+	#include <share.h>  // for _SH_DENYWRITE
+#endif  // _WIN32
 
 
 
@@ -74,8 +77,8 @@ bool cFile::Open(const AString & iFileName, eMode iMode)
 		return false;
 	}
 
-#ifdef _MSC_VER
-	fopen_s(&m_File, (FILE_IO_PREFIX + iFileName).c_str(), Mode);
+#ifdef _WIN32
+	m_File = _fsopen((FILE_IO_PREFIX + iFileName).c_str(), Mode, _SH_DENYWR);
 #else
 	m_File = fopen((FILE_IO_PREFIX + iFileName).c_str(), Mode);
 #endif // _WIN32
@@ -87,8 +90,8 @@ bool cFile::Open(const AString & iFileName, eMode iMode)
 		// So now we know either the file doesn't exist or we don't have rights, no need to worry about file contents.
 		// Simply re-open for read-writing, erasing existing contents:
 
-#ifdef _MSC_VER
-		fopen_s(&m_File, (FILE_IO_PREFIX + iFileName).c_str(), "wb+");
+#ifdef _WIN32
+		m_File = _fsopen((FILE_IO_PREFIX + iFileName).c_str(), "wb+", _SH_DENYWR);
 #else
 		m_File = fopen((FILE_IO_PREFIX + iFileName).c_str(), "wb+");
 #endif // _WIN32
@@ -143,7 +146,7 @@ bool cFile::IsEOF(void) const
 
 
 
-int cFile::Read (void * iBuffer, int iNumBytes)
+int cFile::Read (void * iBuffer, size_t iNumBytes)
 {
 	ASSERT(IsOpen());
 	
@@ -159,7 +162,7 @@ int cFile::Read (void * iBuffer, int iNumBytes)
 
 
 
-int cFile::Write(const void * iBuffer, int iNumBytes)
+int cFile::Write(const void * iBuffer, size_t iNumBytes)
 {
 	ASSERT(IsOpen());
 	
@@ -467,7 +470,6 @@ void cFile::Flush(void)
 {
 	fflush(m_File);
 }
-
 
 
 
