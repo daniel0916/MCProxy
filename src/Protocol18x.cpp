@@ -1361,6 +1361,8 @@ bool cProtocol180::HandleServerSpawnMob(void)
 	cByteBuffer ToClient(512);
 	ToClient.WriteVarUTF8String(Pkt);
 	//CLIENTSEND(ToClient);
+        
+        return true;
 }
 
 
