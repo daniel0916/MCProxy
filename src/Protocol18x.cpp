@@ -9,6 +9,12 @@
 
 
 
+const int MAX_ENC_LEN = 512;
+
+
+
+
+
 #define HANDLE_CLIENT_PACKET_READ(Proc, Type, Var) \
 	Type Var; \
 	{ \
@@ -39,6 +45,32 @@
 		} \
 	}
 #define SERVERSEND(...) m_Connection->SendData(m_Connection->m_ServerSocket, __VA_ARGS__, "Server")
+#define SERVERENCRYPTSEND(...) m_Connection->SendEncryptedData(m_Connection->m_ServerSocket, m_Connection->m_ServerEncryptor, __VA_ARGS__, "Server")
+
+#define COPY_TO_SERVER() \
+	{ \
+		AString ToServer; \
+		m_Connection->m_ClientBuffer.ReadAgain(ToServer); \
+		switch (m_Connection->m_ServerState) \
+		{ \
+			case csUnencrypted: \
+			{ \
+				SERVERSEND(ToServer.data(), ToServer.size()); \
+				break; \
+			} \
+			case csEncryptedUnderstood: \
+			case csEncryptedUnknown: \
+			{ \
+				SERVERENCRYPTSEND(ToServer.data(), ToServer.size()); \
+				break; \
+			} \
+			case csWaitingForEncryption: \
+			{ \
+				m_Connection->m_ServerEncryptionBuffer.append(ToServer.data(), ToServer.size()); \
+				break; \
+			} \
+		} \
+	}
 	
 #define HANDLE_SERVER_READ(Proc) \
 	{ \
@@ -126,6 +158,7 @@ bool cProtocol180::HandleServerPackets(UInt32 a_PacketType, UInt32 a_PacketLen, 
 			case 0x1f: HANDLE_SERVER_READ(HandleServerSetExperience()); return true;
 			case 0x3c: HANDLE_SERVER_READ(HandleServerUpdateScore()); return true;
 			case 0x10: HANDLE_SERVER_READ(HandleServerSpawnPainting()); return true;
+                        case 0x0f: HANDLE_SERVER_READ(HandleServerSpawnMob()); return true;
 			default: break;
 		}  // switch (PacketType)
 	}
@@ -465,12 +498,9 @@ bool cProtocol180::HandleServerUpdateBlockEntity(void)
 	HANDLE_SERVER_PACKET_READ(ReadByte, Byte, Action);
 	HANDLE_SERVER_PACKET_READ(ReadBEShort, short, DataLength);
 	AString NBTData;
-	if (DataLength > 0)
+	if ((DataLength > 0) && !m_Connection->m_ServerBuffer.ReadString(NBTData, (size_t)DataLength))
 	{
-		if (!m_Connection->m_ServerBuffer.ReadBuf((void *)NBTData.data(), (size_t)DataLength))
-		{
-			return false;
-		}
+		return false;
 	}
 
 	m_Connection->m_ServerBuffer.CommitRead();
@@ -480,10 +510,12 @@ bool cProtocol180::HandleServerUpdateBlockEntity(void)
 	Packet.WritePosition(PosX, PosY, PosZ);
 	Packet.WriteByte(Action);
 	Packet.WriteBEShort(DataLength);
-	if (DataLength > 0)
+        
+        if ((DataLength > 0) && !Packet.Write(NBTData.c_str(), (size_t)DataLength))
 	{
-		Packet.WriteBuf((void *)NBTData.data(), (size_t)DataLength);
+		return false;
 	}
+        
 	AString Pkt;
 	Packet.ReadAll(Pkt);
 	cByteBuffer ToClient(512);
@@ -943,7 +975,7 @@ bool cProtocol180::HandleServerEntityMetadata(void)
 	Packet.ReadAll(Pkt);
 	cByteBuffer ToClient(512);
 	ToClient.WriteVarUTF8String(Pkt);
-	//CLIENTSEND(ToClient);   // TODO: Fix Entity Metadata!
+	CLIENTSEND(ToClient);
 
 	return true;
 }
@@ -1283,6 +1315,52 @@ bool cProtocol180::HandleServerScoreboardObjective(void)
 	}
 
 	return true;
+}
+
+
+
+
+
+bool cProtocol180::HandleServerSpawnMob(void)
+{
+        HANDLE_SERVER_PACKET_READ(ReadVarInt,  UInt32, EntityID);
+        HANDLE_SERVER_PACKET_READ(ReadChar,    char,   MobType);
+        HANDLE_SERVER_PACKET_READ(ReadBEInt,   int,    PosX);
+        HANDLE_SERVER_PACKET_READ(ReadBEInt,   int,    PosY);
+	HANDLE_SERVER_PACKET_READ(ReadBEInt,   int,    PosZ);
+	HANDLE_SERVER_PACKET_READ(ReadByte,    Byte,   Yaw);
+	HANDLE_SERVER_PACKET_READ(ReadByte,    Byte,   Pitch);
+	HANDLE_SERVER_PACKET_READ(ReadByte,    Byte,   HeadYaw);
+	HANDLE_SERVER_PACKET_READ(ReadBEShort, short,  VelocityX);
+	HANDLE_SERVER_PACKET_READ(ReadBEShort, short,  VelocityY);
+	HANDLE_SERVER_PACKET_READ(ReadBEShort, short,  VelocityZ);
+        
+	cByteBuffer Packet(512);
+	Packet.WriteByte(0x0F);
+	Packet.WriteVarInt(EntityID);
+	Packet.WriteChar(MobType);
+	Packet.WriteBEInt(PosX);
+	Packet.WriteBEInt(PosY);
+	Packet.WriteBEInt(PosZ);
+	Packet.WriteByte(Yaw);
+	Packet.WriteByte(Pitch);
+	Packet.WriteByte(HeadYaw);
+        Packet.WriteBEShort(VelocityX);
+        Packet.WriteBEShort(VelocityY);
+        Packet.WriteBEShort(VelocityZ);
+        
+	if (!ParseMetadata(m_Connection->m_ServerBuffer, Packet))
+	{
+		return false;
+	}
+        
+        m_Connection->m_ServerBuffer.CommitRead();
+        
+	AString Pkt;
+	Packet.ReadAll(Pkt);
+	cByteBuffer ToClient(512);
+	ToClient.WriteVarUTF8String(Pkt);
+	//CLIENTSEND(ToClient);
 }
 
 
@@ -1710,6 +1788,107 @@ bool cProtocol180::HandleClientPluginMessage(void)
 
 	m_Connection->m_ClientBuffer.CommitRead();
 
+	return true;
+}
+
+
+
+
+
+bool cProtocol180::HandleClientLoginEncryptionKeyResponse(void)
+{
+	HANDLE_CLIENT_PACKET_READ(ReadVarInt, UInt32, EncKeyLength);
+	AString EncKey;
+	if (!m_Connection->m_ClientBuffer.ReadString(EncKey, (size_t)EncKeyLength))
+	{
+		return false;
+	}
+
+	HANDLE_CLIENT_PACKET_READ(ReadVarInt, UInt32, EncNonceLength);
+	AString EncNonce;
+	if (!m_Connection->m_ClientBuffer.ReadString(EncNonce, (size_t)EncNonceLength))
+	{
+		return false;
+	}
+
+	m_Connection->m_ClientBuffer.CommitRead();
+
+	if ((EncKeyLength > MAX_ENC_LEN) || (EncNonceLength > MAX_ENC_LEN))
+	{
+		LOGD("Too long encryption");
+		m_Connection->Kick("Hacked client");
+		return false;
+	}
+
+	// Decrypt EncNonce using privkey
+	cRsaPrivateKey & rsaDecryptor = cServer::Get()->m_PrivateKey;
+	Int32 DecryptedNonce[MAX_ENC_LEN / sizeof(Int32)];
+	int res = rsaDecryptor.Decrypt((const Byte *)EncNonce.data(), EncNonce.size(), (Byte *)DecryptedNonce, sizeof(DecryptedNonce));
+	if (res != 4)
+	{
+		LOGD("Bad nonce length: got %d, exp %d", res, 4);
+		m_Connection->Kick("Hacked client");
+		return false;
+	}
+	if (ntohl((uint32_t)DecryptedNonce[0]) != (unsigned)(uintptr_t)this)
+	{
+		LOGD("Bad nonce value");
+		m_Connection->Kick("Hacked client");
+		return false;
+	}
+
+	// Decrypt the symmetric encryption key using privkey:
+	Byte DecryptedKey[MAX_ENC_LEN];
+	res = rsaDecryptor.Decrypt((const Byte *)EncKey.data(), EncKey.size(), DecryptedKey, sizeof(DecryptedKey));
+	if (res != 16)
+	{
+		LOGD("Bad key length");
+		m_Connection->Kick("Hacked client");
+		return false;
+	}
+
+	m_Connection->StartEncryption(DecryptedKey);
+
+	cServer::Get()->m_Authenticator.Authenticate(m_Connection->m_UserName, m_Connection->m_AuthServerID);
+
+	return true;
+}
+
+
+
+
+
+bool cProtocol180::HandleClientLoginStart(void)
+{
+	HANDLE_CLIENT_PACKET_READ(ReadVarUTF8String, AString, UserName);
+
+	m_Connection->m_UserName = UserName;
+
+	if (cServer::Get()->m_ShouldAuthenticate)
+	{
+		m_Connection->m_ClientBuffer.CommitRead();
+
+		// Send Encryption Request
+		cByteBuffer Packet(512);
+		Packet.WriteByte(0x01);
+		Packet.WriteVarUTF8String(cServer::Get()->m_ServerID);
+		AString PubKeyDer = cServer::Get()->m_PublicKeyDER;
+		Packet.WriteVarInt((UInt32)PubKeyDer.size());
+		Packet.WriteBuf(PubKeyDer.data(), PubKeyDer.size());
+		Packet.WriteVarInt(4);
+		Packet.WriteBEInt((int)(intptr_t)this);
+		AString Pkt;
+		Packet.ReadAll(Pkt);
+		cByteBuffer ToClient(512);
+		ToClient.WriteVarUTF8String(Pkt);
+		CLIENTSEND(ToClient);
+
+		return true;
+	}
+
+	m_Connection->m_UUID = cServer::Get()->GenerateOfflineUUID(UserName);
+
+	COPY_TO_SERVER();
 	return true;
 }
 

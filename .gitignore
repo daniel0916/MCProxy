@@ -21,3 +21,4 @@ nbproject/
 compile_commands.json
 src/PolarSSL++/Makefile
 Makefile
+/config.ini

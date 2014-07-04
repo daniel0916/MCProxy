@@ -56,6 +56,7 @@ public:
 	virtual bool HandleServerTeams(void) override;
 	bool HandleServerSpawnPainting(void);
 	virtual bool HandleServerScoreboardObjective(void) override;
+        bool HandleServerSpawnMob(void);
 
 	virtual bool HandleClientStatusRequest(void) override;
 	bool HandleClientClientSettings(void);
@@ -72,4 +73,6 @@ public:
 	bool HandleClientPlayerPositionLook(void);
 	bool HandleClientSpectate(void);
 	bool HandleClientPluginMessage(void);
+        virtual bool HandleClientLoginEncryptionKeyResponse(void) override;
+        virtual bool HandleClientLoginStart(void) override;
 };
