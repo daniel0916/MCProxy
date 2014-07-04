@@ -975,7 +975,7 @@ bool cProtocol180::HandleServerEntityMetadata(void)
 	Packet.ReadAll(Pkt);
 	cByteBuffer ToClient(512);
 	ToClient.WriteVarUTF8String(Pkt);
-	CLIENTSEND(ToClient);
+	//CLIENTSEND(ToClient);
 
 	return true;
 }
