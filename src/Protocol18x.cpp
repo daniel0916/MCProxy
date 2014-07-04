@@ -1327,13 +1327,13 @@ bool cProtocol180::HandleServerSpawnMob(void)
         HANDLE_SERVER_PACKET_READ(ReadChar,    char,   MobType);
         HANDLE_SERVER_PACKET_READ(ReadBEInt,   int,    PosX);
         HANDLE_SERVER_PACKET_READ(ReadBEInt,   int,    PosY);
-	HANDLE_SERVER_PACKET_READ(ReadBEInt,   int,    PosZ);
-	HANDLE_SERVER_PACKET_READ(ReadByte,    Byte,   Yaw);
-	HANDLE_SERVER_PACKET_READ(ReadByte,    Byte,   Pitch);
-	HANDLE_SERVER_PACKET_READ(ReadByte,    Byte,   HeadYaw);
-	HANDLE_SERVER_PACKET_READ(ReadBEShort, short,  VelocityX);
-	HANDLE_SERVER_PACKET_READ(ReadBEShort, short,  VelocityY);
-	HANDLE_SERVER_PACKET_READ(ReadBEShort, short,  VelocityZ);
+        HANDLE_SERVER_PACKET_READ(ReadBEInt,   int,    PosZ);
+        HANDLE_SERVER_PACKET_READ(ReadByte,    Byte,   Yaw);
+        HANDLE_SERVER_PACKET_READ(ReadByte,    Byte,   Pitch);
+        HANDLE_SERVER_PACKET_READ(ReadByte,    Byte,   HeadYaw);
+        HANDLE_SERVER_PACKET_READ(ReadBEShort, short,  VelocityX);
+        HANDLE_SERVER_PACKET_READ(ReadBEShort, short,  VelocityY);
+        HANDLE_SERVER_PACKET_READ(ReadBEShort, short,  VelocityZ);
         
 	cByteBuffer Packet(512);
 	Packet.WriteByte(0x0F);
